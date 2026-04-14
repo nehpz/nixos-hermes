@@ -1,0 +1,13 @@
+keys:
+  - &host_key age1crqsr4363khqa74u0ug9xl8qkj7s4kvwc6rh9ysc839220rvg5lqmrn3lq
+
+creation_rules:
+  - path_regex: .secrets/.*\.yaml$
+    key_groups:
+      - age:
+          - *host_key
+
+  - path_regex: .secrets/ssh_host_ed25519_key$
+    key_groups:
+      - age:
+          - *host_key
