@@ -114,6 +114,8 @@ history or reviewing the commit that introduced the fixes.
 - The public SSH authorized keys already in the repo are acceptable (they are
   public by design).
 - Commit messages: imperative mood, present tense, ≤72 chars subject line.
+- **Never `git push` autonomously.** Commit is the limit of unsupervised git
+  action. Always stop after `git commit` and wait for explicit instruction to push.
 
 ---
 
