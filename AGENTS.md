@@ -240,16 +240,18 @@ The service runs natively (no container mode) as the `hermes` user.
 and starts the gateway systemd unit.
 
 Key option decisions:
-- **OAuth auth tokens are not managed by sops.** Tokens for all providers
-  (`auth.json`) persist on the ZFS dataset (`rpool/data/hermes` →
-  `/var/lib/hermes/.hermes/`) and are managed entirely at runtime by the
-  hermes-agent process. Providers can be swapped or used concurrently; their
-  tokens refresh independently. Baking them into sops would treat ephemeral
-  credentials as static secrets and cause stale-token failures after expiry.
-- **First-boot auth bootstrap:** after `nixos-install` and first login, run
-  `hermes auth login` for each provider before starting the service, or
-  manually place a valid `auth.json` at `/var/lib/hermes/.hermes/auth.json`.
-  The dataset persists across all subsequent rebuilds.
+- **`authFile` is bootstrap-only.** In managed mode, `hermes gateway install`
+  and interactive auth commands are blocked. `authFile` is the only way to seed
+  credentials on first activation. `authFileForceOverwrite = false` (the default)
+  means the sops-stored token seeds `auth.json` once and is never applied again;
+  runtime token refreshes made by hermes persist on the ZFS dataset across all
+  subsequent rebuilds. The token in sops goes stale but is never re-applied — this
+  is intentional. Providers can be swapped or run concurrently; each has its own
+  sops binding (`anthropic_auth_json`, `codex_auth_json`).
+- **Re-auth procedure:** obtain fresh tokens (e.g. from `~/.omp/agent/agent.db`
+  on a machine running Oh My Pi), update the plaintext in `.secrets/hermes-secrets.yaml`,
+  re-encrypt, set `authFileForceOverwrite = true` in `hermes-agent.nix`, rebuild,
+  then revert `authFileForceOverwrite` to false and rebuild again.
 - `environmentFiles`: points at the `hermes-env` sops secret, a `KEY=value` env
   file merged into `$HERMES_HOME/.env` at activation.
   Current keys: `ELEVENLABS_API_KEY`, `DISCORD_BOT_TOKEN`.

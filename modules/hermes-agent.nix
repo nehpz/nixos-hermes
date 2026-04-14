@@ -5,6 +5,11 @@
     enable              = true;
     addToSystemPackages = true;
 
+    # Seeds auth.json on first activation only (authFileForceOverwrite defaults
+    # to false). Runtime token refreshes survive all subsequent rebuilds.
+    # Active provider is anthropic; codex available for subagent delegation.
+    authFile = config.sops.secrets.anthropic_auth_json.path;
+
     # API keys merged into $HERMES_HOME/.env at activation.
     # Current keys: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN
     # Non-secret Discord behaviour belongs in settings.discord below, not here.
