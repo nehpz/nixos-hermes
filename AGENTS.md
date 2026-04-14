@@ -240,12 +240,19 @@ The service runs natively (no container mode) as the `hermes` user.
 and starts the gateway systemd unit.
 
 Key option decisions:
-- `authFile`: seeds `auth.json` for Anthropic OAuth on first deploy only.
-  Preserved on subsequent rebuilds so runtime token refreshes survive.
-  Set `authFileForceOverwrite = true` to force re-seed after re-auth.
+- **OAuth auth tokens are not managed by sops.** Tokens for all providers
+  (`auth.json`) persist on the ZFS dataset (`rpool/data/hermes` →
+  `/var/lib/hermes/.hermes/`) and are managed entirely at runtime by the
+  hermes-agent process. Providers can be swapped or used concurrently; their
+  tokens refresh independently. Baking them into sops would treat ephemeral
+  credentials as static secrets and cause stale-token failures after expiry.
+- **First-boot auth bootstrap:** after `nixos-install` and first login, run
+  `hermes auth login` for each provider before starting the service, or
+  manually place a valid `auth.json` at `/var/lib/hermes/.hermes/auth.json`.
+  The dataset persists across all subsequent rebuilds.
 - `environmentFiles`: points at the `hermes-env` sops secret, a `KEY=value` env
   file merged into `$HERMES_HOME/.env` at activation.
-  Current keys: `ELEVENLABS_API_KEY`, `DISCORD_BOT_TOKEN` (add when ready).
+  Current keys: `ELEVENLABS_API_KEY`, `DISCORD_BOT_TOKEN`.
 - `settings.tts.elevenlabs.voice_id`: not secret — a public ElevenLabs voice
   identifier. Fill in from elevenlabs.io/app → Voices → copy voice ID.
 - `HERMES_HOME` and `HERMES_MANAGED` are **owned by the module**.
@@ -350,7 +357,7 @@ configured in this deployment; full list at hermes-agent docs.
 ### Provider Keys (add as needed)
 | Variable | Provider |
 |---|---|
-| `ANTHROPIC_API_KEY` / `ANTHROPIC_TOKEN` | Anthropic direct API (if not using OAuth authFile) |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_TOKEN` | Anthropic direct API (OAuth token lives on dataset, not in sops) |
 | `OPENROUTER_API_KEY` | OpenRouter (routes to any model) |
 | `OPENAI_API_KEY` | OpenAI direct |
 | `GROQ_API_KEY` | Groq Whisper STT |

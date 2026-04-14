@@ -5,10 +5,6 @@
     enable              = true;
     addToSystemPackages = true;
 
-    # OAuth credentials seed for the Anthropic provider (auth.json format).
-    # Copied on first deploy; preserved on subsequent rebuilds so runtime token
-    # refreshes are not overwritten. Set authFileForceOverwrite = true to reseed.
-    authFile = config.sops.secrets.anthropic_auth_json.path;
 
     # API keys merged into $HERMES_HOME/.env at activation.
     # Keys expected: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN
