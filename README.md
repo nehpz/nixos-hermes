@@ -74,9 +74,9 @@ Currently managed secrets:
 | Secret | Purpose |
 |--------|---------|
 | `ssh_host_ed25519_key` | Stable SSH host identity across rebuilds |
-| `codex_auth_json` | OpenAI Codex authentication for hermes-agent |
-| `elevenlabs_api_key` | ElevenLabs TTS for hermes-agent voice output |
-| `discord_bot_token` | Discord integration for hermes-agent |
+| `hermes-env` | Env bundle for hermes-agent: `ELEVENLABS_API_KEY`, `DISCORD_BOT_TOKEN` |
+| `anthropic_auth_json` | Anthropic OAuth credentials for hermes-agent (`authFile`) |
+| `codex_auth_json` | OpenAI Codex OAuth credentials (declared; unused — provider is Anthropic) |
 
 ### Hermes Agent
 
