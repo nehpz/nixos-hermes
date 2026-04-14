@@ -125,6 +125,17 @@ history or reviewing the commit that introduced the fixes.
 Single host output: `nixosConfigurations.nixos-hermes`. Manages input pins.
 Do not add multiple hosts without a corresponding refactor of the module tree.
 
+**`nixosModules.default` convention:** In flake outputs, `.default` is the
+canonical name for a flake's primary export of a given type — analogous to
+`packages.default`. `determinate.nixosModules.default` and
+`hermes-agent.nixosModules.default` are values from two entirely separate
+flakes; naming collision is impossible. The NixOS module system merges all
+entries in the `modules` list regardless of where they came from.
+
+**`determinate.nixosModules.default` owns `nix.package`.** Do not set
+`nix.package` elsewhere in the module tree — the Determinate module manages
+it. Duplicate declarations will cause an evaluation error.
+
 ### `hosts/hermes/default.nix`
 Host entry point. Contains machine-specific identity constants (`hostName`,
 `hostId`, `stateVersion`, `hostPlatform`) and the import list. Nothing else.
@@ -168,6 +179,19 @@ nix flake check
 ```bash
 nixos-rebuild dry-build --flake .#nixos-hermes
 ```
+
+### First install (live CD)
+The `determinate.nixosModules.default` module installs Determinate Nix from
+FlakeHub. On first install, pass extra substituter flags so Nix doesn't have to
+build it from source:
+```bash
+nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes \
+  --option extra-substituters https://install.determinate.systems \
+  --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
+```
+These flags are only required for the initial install. Once Determinate Nix
+v3.6.0 or later is running on the host, subsequent `nixos-rebuild` runs need no
+extra options.
 
 ### Apply to host
 ```bash

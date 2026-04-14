@@ -1,8 +1,6 @@
 { pkgs, ... }:
 
 {
-  nix.package = pkgs.determinate-nix;
-
   time.timeZone      = "America/Phoenix";
   i18n.defaultLocale = "en_US.UTF-8";
   console.keyMap     = "us";
