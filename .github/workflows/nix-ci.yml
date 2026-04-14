@@ -9,7 +9,8 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: DeterminateSystems/determinate-nix-action@v3
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: DeterminateSystems/flakehub-cache-action@main
+      - uses: DeterminateSystems/flake-checker-action@main
       - run: nix flake check
