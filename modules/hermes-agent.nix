@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, pkgs, ... }:
 
 {
   services.hermes-agent = {
@@ -9,6 +9,19 @@
     # to false). Runtime token refreshes survive all subsequent rebuilds.
     # Active provider is anthropic; codex available for subagent delegation.
     authFile = config.sops.secrets.anthropic_auth_json.path;
+
+    # Packages required by enabled toolsets.
+    # playwright-driver.browsers: NixOS-wrapped browser binaries for the browser toolset.
+    # ffmpeg: audio processing for ElevenLabs TTS voice bubble delivery.
+    # ripgrep: fast search used by file and terminal toolsets.
+    extraPackages = with pkgs; [ playwright-driver.browsers ffmpeg ripgrep ];
+
+    # Non-secret environment variables injected into the service.
+    # PLAYWRIGHT_BROWSERS_PATH tells hermes's internal Playwright where NixOS
+    # placed the browser binaries (standard PATH lookup does not work for Playwright).
+    environment = {
+      PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+    };
 
     # API keys merged into $HERMES_HOME/.env at activation.
     # Current keys: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN
