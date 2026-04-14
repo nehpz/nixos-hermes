@@ -40,7 +40,7 @@ nixos-hermes/
 
 | Layer | Tool |
 |-------|------|
-| OS | NixOS (nixos-unstable) |
+| OS | NixOS (nixpkgs unstable via FlakeHub `NixOS/nixpkgs/0`) |
 | Nix runtime | Determinate Nix (via `determinate` flake input) |
 | Secret management | sops-nix + age |
 | Storage | ZFS (`rpool`, mirror, encrypted) |
@@ -135,6 +135,11 @@ entries in the `modules` list regardless of where they came from.
 **`determinate.nixosModules.default` owns `nix.package`.** Do not set
 `nix.package` elsewhere in the module tree — the Determinate module manages
 it. Duplicate declarations will cause an evaluation error.
+
+**All flake inputs use FlakeHub URLs.** `NixOS/nixpkgs/0` is FlakeHub's semver
+alias for nixpkgs unstable (`0` = pre-1.0 channel). Do not switch individual
+inputs back to raw GitHub URLs — FlakeHub Cache works best when all inputs are
+FlakeHub-sourced.
 
 ### `hosts/hermes/default.nix`
 Host entry point. Contains machine-specific identity constants (`hostName`,
