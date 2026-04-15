@@ -191,11 +191,22 @@ cd /root/nixos-hermes
 # Partition, format, and mount everything
 nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
 
-# Copy the age key into the target system
+# Copy the age key into the target system for sops-nix runtime secret management
 mkdir -p /mnt/etc/secrets && cp /etc/secrets/age.key /mnt/etc/secrets/age.key
 
+# Pre-place the SSH host key so boot.initrd.secrets can bake it into the initrd.
+# sops-nix is a runtime service and hasn't run yet at this point; without this
+# step the initrd gets an ephemeral key and the fingerprint changes every install.
+mkdir -p /mnt/etc/ssh
+SOPS_AGE_KEY_FILE=/etc/secrets/age.key \
+  nix run nixpkgs#sops -- --decrypt --output-type binary \
+  hosts/hermes/secrets/ssh_host_ed25519_key.enc > /mnt/etc/ssh/ssh_host_ed25519_key
+chmod 600 /mnt/etc/ssh/ssh_host_ed25519_key
+
 # Install
-nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://install.determinate.systems --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
+nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes \
+  --option extra-substituters https://install.determinate.systems \
+  --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
 
 # Verify before rebooting — this directory must contain files
 ls /mnt/boot/nixos/

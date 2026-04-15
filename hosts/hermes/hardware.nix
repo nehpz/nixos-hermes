@@ -6,6 +6,13 @@
     ];
 
 
+  # Bake the sops-managed SSH host key into the initrd so the fingerprint is
+  # stable across rebuilds. On first install, pre-place the key at
+  # /mnt/etc/ssh/ssh_host_ed25519_key before running nixos-install.
+  boot.initrd.secrets = {
+    "/etc/ssh/ssh_host_ed25519_key" = "/etc/ssh/ssh_host_ed25519_key";
+  };
+
   boot.initrd.availableKernelModules = [
     "xhci_pci"
     "ahci"
