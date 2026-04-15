@@ -219,7 +219,7 @@ mount /dev/disk/by-partlabel/disk-nvme1-ESP /mnt/boot-fallback
 
 
 # Install
-nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://install.determinate.systems --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
+nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://cache.flakehub.com --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
 
 # Verify before rebooting — this directory must contain files
 ls /mnt/boot/nixos/
