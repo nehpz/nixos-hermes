@@ -1,7 +1,7 @@
 { config, ... }:
 
 {
-  sops.defaultSopsFile = ./secrets/hermes-secrets.yaml.enc;
+  sops.defaultSopsFile = ./secrets/hermes-secrets.yaml;
   sops.age.keyFile = "/etc/secrets/age.key";
 
   sops.secrets = {
