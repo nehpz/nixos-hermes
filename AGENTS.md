@@ -43,7 +43,7 @@ nixos-hermes/
 | OS | NixOS (nixpkgs unstable via FlakeHub `NixOS/nixpkgs/0`) |
 | Nix runtime | Determinate Nix (via `determinate` flake input) |
 | Secret management | sops-nix + age |
-| Storage | ZFS (`rpool`, mirror, encrypted) |
+| Storage | ZFS (`rpool`, mirror) |
 | Boot | systemd-boot, dual ESP |
 | Agent service | `hermes-agent.nixosModules.default` |
 | CI | GitHub Actions + DeterminateSystems stack |
@@ -65,14 +65,13 @@ nixos-hermes/
 
 - **Never commit plaintext secrets.** `.secrets/` is `.gitignore`d; it exists
   only for local templating.
-- The committed encrypted files live under `hosts/hermes/secrets/` with `.enc`
-  suffixes (e.g., `hermes-secrets.yaml.enc`).
+- The committed encrypted secrets live under `hosts/hermes/secrets/`.
 - The `sops age` key is `/etc/secrets/age.key` on the host. The corresponding
   public key is registered in `.sops.yaml`. Do not change the public key in
   `.sops.yaml` without re-encrypting every secret file.
 - `.secrets/hermes-secrets.yaml` is the plaintext template (`gitignored`). Workflow:
-  edit locally → `sops --encrypt .secrets/hermes-secrets.yaml > hosts/hermes/secrets/hermes-secrets.yaml.enc`
-  → commit the `.enc` file → never commit the plaintext.
+  edit locally → `sops --encrypt .secrets/hermes-secrets.yaml > hosts/hermes/secrets/hermes-secrets.yaml`
+  → commit the encrypted file → never commit the plaintext.
 - When adding a new secret key: add it to `.secrets/hermes-secrets.yaml`, add the
   `sops.secrets.<name>` binding in `hosts/hermes/sops.nix`, then re-encrypt.
 
@@ -129,7 +128,7 @@ These constants must never be extracted into shared modules.
 ### `hosts/hermes/hardware.nix`
 
 Everything tied to physical hardware: initrd modules, kernel params, filesystem
-mounts, bootloader, GPU packages, initrd SSH server for remote ZFS unlock.
+mounts, bootloader, and GPU packages.
 
 ### `hosts/hermes/disk-config.nix`
 
@@ -176,38 +175,29 @@ nixos-rebuild dry-build --flake .#nixos-hermes
 
 ### First Install (Live CD)
 
-The ZFS pool encryption key is managed by sops (`hosts/hermes/secrets/zfs.key.enc`).
-Disko needs the plaintext key on the live CD filesystem before it can create the
-encrypted pool. Decrypt it first:
+Place the age private key on the live environment first; it must end up at
+`/mnt/etc/secrets/age.key` so `sops-nix` can decrypt hermes-agent runtime
+secrets after install:
 
 ```bash
-# Place the age private key so sops can decrypt
+# Place the age private key on the live system
 mkdir -p /etc/secrets
-# Copy age.key from wherever you have it (USB, password manager, etc.)
 cp /path/to/age.key /etc/secrets/age.key
 
 # Clone the repo
 nix shell nixpkgs#git -c git clone https://github.com/nehpz/nixos-hermes /root/nixos-hermes
 cd /root/nixos-hermes
 
-# Decrypt the ZFS key for disko pool creation
-nix run nixpkgs#sops -- --decrypt --output-type binary \
-  hosts/hermes/secrets/zfs.key.enc > /etc/secrets/zfs.key
-
 # Partition, format, and mount everything
 nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
 
-# Place the age key on the target for sops-nix activation
-mkdir -p /mnt/etc/secrets
-cp /etc/secrets/age.key /mnt/etc/secrets/age.key
+# Copy the age key into the target system
+mkdir -p /mnt/etc/secrets && cp /etc/secrets/age.key /mnt/etc/secrets/age.key
 
-# Install — sops-nix will decrypt all secrets (including zfs.key) into the
-# chroot during activation; initrd-secrets bakes zfs.key into the initrd.
-nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes \
-  --option extra-substituters https://install.determinate.systems \
-  --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
+# Install
+nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://install.determinate.systems --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
 
-# Verify before rebooting — if this directory is empty, activation failed.
+# Verify before rebooting — this directory must contain files
 ls /mnt/boot/nixos/
 ```
 
@@ -238,12 +228,8 @@ CI publishes the flake to FlakeHub on every push to `main`. There is no automate
 - **Pool name `rpool` is fixed.** The ZFS hostId (`52dd4e5a`) ties the pool to
   this host. Changing either requires pool export/import.
 - **The age public key in `.sops.yaml`** must match the private key at
-  `/etc/secrets/age.key` on the host. They are a matched pair generated once.
-- **The initrd SSH host key** (`/etc/ssh/ssh_host_ed25519_key`) is injected
-  into the initrd at build time via `boot.initrd.secrets`. The same key is
-  managed by SOPS for the main-stage SSH server. Replacing it requires
-  re-encrypting `hosts/hermes/secrets/ssh_host_ed25519_key.enc` and updating known-hosts
-  on every client.
+  `/etc/secrets/age.key` on the host. They are a matched pair generated once,
+  and hermes-agent runtime secrets depend on that key.
 - **Disk device IDs** in `disk-config.nix` are physical identifiers tied to
   the installed drives. Do not change them.
 - **`system.stateVersion = "25.05"`** must not be bumped without reading the

@@ -62,9 +62,6 @@
         autotrim = "on";
       };
       rootFsOptions = {
-        encryption = "on";
-        keyformat  = "raw";
-        keylocation = "file:///etc/secrets/zfs.key";
         mountpoint = "none";
         acltype = "posixacl";
         xattr = "sa";

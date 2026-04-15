@@ -5,11 +5,6 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
-  boot.initrd.secrets = {
-    "/etc/ssh/ssh_host_ed25519_key" = "/etc/ssh/ssh_host_ed25519_key";
-    # sops-nix decrypts zfs.key during activation; initrd-secrets bakes it in.
-    "/etc/secrets/zfs.key" = "/etc/secrets/zfs.key";
-  };
 
   boot.initrd.availableKernelModules = [
     "xhci_pci"
@@ -23,15 +18,6 @@
   ];
   boot.initrd.kernelModules = [ ];
 
-  boot.initrd.network.enable = true;
-  boot.initrd.network.ssh = {
-    enable = true;
-    port = 22;
-    hostKeys = [ "/etc/ssh/ssh_host_ed25519_key" ];
-    authorizedKeys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOQ0xpYd/EJnMyHW36xmWodb0DPoMHf4LpQAl7xheMRE"
-    ];
-  };
 
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
