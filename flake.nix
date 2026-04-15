@@ -2,8 +2,8 @@
   description = "Hermes Agent";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0";
     sops-nix.url = "https://flakehub.com/f/Mic92/sops-nix/0.1.1200";
     hermes-agent.url = "github:NousResearch/hermes-agent";
     hermes-agent.inputs.nixpkgs.follows = "nixpkgs";
@@ -14,6 +14,7 @@
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
       modules = [
+        determinate.nixosModules.default
         sops-nix.nixosModules.sops
         hermes-agent.nixosModules.default
         ./hosts/hermes

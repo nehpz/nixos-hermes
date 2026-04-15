@@ -15,7 +15,7 @@
 [Ll]ocal
 [Ss]cripts
 
-#
+# Sensitive data
 
 .env/
 .env.bak/
@@ -28,6 +28,7 @@
 .env.test.local
 .env.production.local
 .secrets/
+/docs/
 
 #
 
