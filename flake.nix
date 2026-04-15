@@ -11,7 +11,6 @@
 
   outputs = { self, nixpkgs, determinate, sops-nix, hermes-agent, ... }@inputs: {
     nixosConfigurations.nixos-hermes = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
       specialArgs = { inherit inputs; };
       modules = [
         determinate.nixosModules.default
