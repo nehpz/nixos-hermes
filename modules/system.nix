@@ -1,20 +1,25 @@
 { pkgs, ... }:
 
 {
-  time.timeZone      = "America/Phoenix";
+  time.timeZone = "America/Phoenix";
   i18n.defaultLocale = "en_US.UTF-8";
-  console.keyMap     = "us";
+  console.keyMap = "us";
 
   networking.networkmanager.enable = true;
-  networking.firewall.enable       = false;
+  networking.firewall.enable = false;
 
   services.power-profiles-daemon.enable = false;
-  services.thermald.enable              = true;
-  services.printing.enable              = true;
-  services.xserver.videoDrivers         = [ "modesetting" ];
+  services.thermald.enable = true;
+  services.printing.enable = true;
+  services.xserver.videoDrivers = [ "modesetting" ];
 
-  services.openssh.enable   = true;
-  services.openssh.hostKeys = [{ path = "/etc/ssh/ssh_host_ed25519_key"; type = "ed25519"; }];
+  services.openssh.enable = true;
+  services.openssh.hostKeys = [
+    {
+      path = "/etc/ssh/ssh_host_ed25519_key";
+      type = "ed25519";
+    }
+  ];
 
   security.sudo.wheelNeedsPassword = false;
 

@@ -1,10 +1,15 @@
-{ config, lib, pkgs, modulesPath, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  modulesPath,
+  ...
+}:
 
 {
-  imports =
-    [ (modulesPath + "/installer/scan/not-detected.nix")
-    ];
-
+  imports = [
+    (modulesPath + "/installer/scan/not-detected.nix")
+  ];
 
   # Bake the sops-managed SSH host key into the initrd so the fingerprint is
   # stable across rebuilds. On first install, pre-place the key at
@@ -24,7 +29,6 @@
     "sr_mod"
   ];
   boot.initrd.kernelModules = [ ];
-
 
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];

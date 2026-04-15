@@ -9,15 +9,24 @@
     hermes-agent.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, determinate, sops-nix, hermes-agent, ... }@inputs: {
-    nixosConfigurations.nixos-hermes = nixpkgs.lib.nixosSystem {
-      specialArgs = { inherit inputs; };
-      modules = [
-        determinate.nixosModules.default
-        sops-nix.nixosModules.sops
-        hermes-agent.nixosModules.default
-        ./hosts/hermes
-      ];
+  outputs =
+    {
+      self,
+      nixpkgs,
+      determinate,
+      sops-nix,
+      hermes-agent,
+      ...
+    }@inputs:
+    {
+      nixosConfigurations.nixos-hermes = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit inputs; };
+        modules = [
+          determinate.nixosModules.default
+          sops-nix.nixosModules.sops
+          hermes-agent.nixosModules.default
+          ./hosts/hermes
+        ];
+      };
     };
-  };
 }

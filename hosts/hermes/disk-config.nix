@@ -67,12 +67,48 @@
           compression = "lz4";
         };
         datasets = {
-          "root/nixos"  = { type = "zfs_fs"; options = { mountpoint = "legacy"; }; };
-          "nix"         = { type = "zfs_fs"; options = { mountpoint = "legacy"; compression = "zstd"; }; };
-          "var"         = { type = "zfs_fs"; options = { mountpoint = "legacy"; }; };
-          "data"        = { type = "zfs_fs"; options = { mountpoint = "none"; }; };
-          "data/hermes" = { type = "zfs_fs"; options = { mountpoint = "legacy"; recordsize = "16K"; }; };
-          "data/backup" = { type = "zfs_fs"; options = { mountpoint = "legacy"; compression = "zstd"; recordsize = "1M"; atime = "off"; sync = "disabled"; }; };
+          "root/nixos" = {
+            type = "zfs_fs";
+            options = {
+              mountpoint = "legacy";
+            };
+          };
+          "nix" = {
+            type = "zfs_fs";
+            options = {
+              mountpoint = "legacy";
+              compression = "zstd";
+            };
+          };
+          "var" = {
+            type = "zfs_fs";
+            options = {
+              mountpoint = "legacy";
+            };
+          };
+          "data" = {
+            type = "zfs_fs";
+            options = {
+              mountpoint = "none";
+            };
+          };
+          "data/hermes" = {
+            type = "zfs_fs";
+            options = {
+              mountpoint = "legacy";
+              recordsize = "16K";
+            };
+          };
+          "data/backup" = {
+            type = "zfs_fs";
+            options = {
+              mountpoint = "legacy";
+              compression = "zstd";
+              recordsize = "1M";
+              atime = "off";
+              sync = "disabled";
+            };
+          };
         };
       };
     };

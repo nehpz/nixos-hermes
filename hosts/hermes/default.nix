@@ -13,7 +13,7 @@
   # shared across hosts or extracted into modules.
   networking.hostName = "nixos-hermes";
   # ZFS hostId ties the pool to this machine; changing it requires pool export/import.
-  networking.hostId   = "52dd4e5a";
+  networking.hostId = "52dd4e5a";
 
   system.stateVersion = "25.05";
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";

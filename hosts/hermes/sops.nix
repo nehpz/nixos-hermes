@@ -11,10 +11,10 @@
     # (see First Install procedure); sops-nix maintains it on subsequent rebuilds.
     ssh_host_ed25519_key = {
       sopsFile = ./secrets/ssh_host_ed25519_key.enc;
-      format   = "binary";
-      owner    = "root";
-      mode     = "0600";
-      path     = "/etc/ssh/ssh_host_ed25519_key";
+      format = "binary";
+      owner = "root";
+      mode = "0600";
+      path = "/etc/ssh/ssh_host_ed25519_key";
     };
 
     # Combined env file for hermes-agent: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN, etc.
@@ -22,7 +22,7 @@
     # at activation time by the hermes-agent module.
     "hermes-env" = {
       owner = "hermes";
-      mode  = "0400";
+      mode = "0400";
     };
 
     # OAuth bootstrap credentials for hermes-agent providers.
@@ -32,11 +32,11 @@
     # then revert to false.
     anthropic_auth_json = {
       owner = "hermes";
-      mode  = "0400";
+      mode = "0400";
     };
     codex_auth_json = {
       owner = "hermes";
-      mode  = "0400";
+      mode = "0400";
     };
   };
 }

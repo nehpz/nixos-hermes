@@ -85,3 +85,8 @@ Icon
 .com.apple.timemachine.donotpresent
 .AppleDB
 .AppleDesktop
+
+
+# prek/pre-commit
+.prek/
+.pre-commit-cache/

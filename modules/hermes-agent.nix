@@ -2,7 +2,7 @@
 
 {
   services.hermes-agent = {
-    enable              = true;
+    enable = true;
     addToSystemPackages = true;
 
     # Seeds auth.json on first activation only (authFileForceOverwrite defaults
@@ -14,7 +14,11 @@
     # playwright-driver.browsers: NixOS-wrapped browser binaries for the browser toolset.
     # ffmpeg: audio processing for ElevenLabs TTS voice bubble delivery.
     # ripgrep: fast search used by file and terminal toolsets.
-    extraPackages = with pkgs; [ playwright-driver.browsers ffmpeg ripgrep ];
+    extraPackages = with pkgs; [
+      playwright-driver.browsers
+      ffmpeg
+      ripgrep
+    ];
 
     # Non-secret environment variables injected into the service.
     # PLAYWRIGHT_BROWSERS_PATH tells hermes's internal Playwright where NixOS
@@ -23,7 +27,7 @@
     # equivalent key — placing it here keeps it out of the secret bundle.
     environment = {
       PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
-      DISCORD_ALLOWED_USERS    = "185292472836947968";
+      DISCORD_ALLOWED_USERS = "185292472836947968";
     };
 
     # API keys merged into $HERMES_HOME/.env at activation.
@@ -102,12 +106,12 @@
     settings = {
       model = {
         provider = "anthropic";
-        default  = "claude-sonnet-4-6";
+        default = "claude-sonnet-4-6";
       };
 
       # Capabilities the agent may invoke.
       toolsets = [
-        "hermes-cli"     # Full toolset — all 36 tools including clarify. The default for interactive CLI sessions
+        "hermes-cli" # Full toolset — all 36 tools including clarify. The default for interactive CLI sessions
       ];
 
       tts = {
@@ -122,37 +126,38 @@
       # DISCORD_BOT_TOKEN remains in the hermes-env sops secret.
       # DISCORD_ALLOWED_USERS is wired via environment above (config.yaml has no allowed_users key).
       discord = {
-        require_mention          = true;                    # Respond only when @mentioned
-        auto_thread              = true;                    # Isolate each conversation in a thread
-        reactions                = true;                    # Emoji reactions for processing state
-        allowed_channels         = [                        # Restrict to specific channel IDs; empty = all
-          "1493930581090762833"                             # hermes-yui (text)
-          "1493930714687869028"                             # hermes-yui-voice (voice)
+        require_mention = true; # Respond only when @mentioned
+        auto_thread = true; # Isolate each conversation in a thread
+        reactions = true; # Emoji reactions for processing state
+        allowed_channels = [
+          # Restrict to specific channel IDs; empty = all
+          "1493930581090762833" # hermes-yui (text)
+          "1493930714687869028" # hermes-yui-voice (voice)
         ];
-        free_response_channels   = [];                      # Channels that respond without @mention
-        home_channel             = "1493934973009526884";   # hermes-home (text)
+        free_response_channels = [ ]; # Channels that respond without @mention
+        home_channel = "1493934973009526884"; # hermes-home (text)
       };
 
       # One session per user per channel — prevents session bleed in shared servers.
       group_sessions_per_user = true;
 
       memory = {
-        memory_enabled       = true;
+        memory_enabled = true;
         user_profile_enabled = true;
       };
 
       # Compress context at 50% of the model's context window.
       compression = {
-        enabled   = true;
+        enabled = true;
         threshold = 0.50;
       };
 
       agent = {
-        max_turns = 50;  # Hard ceiling on turns per conversation
+        max_turns = 50; # Hard ceiling on turns per conversation
       };
 
       checkpoints = {
-        enabled       = true;
+        enabled = true;
         max_snapshots = 50;
       };
     };
