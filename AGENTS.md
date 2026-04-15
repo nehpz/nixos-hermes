@@ -203,7 +203,8 @@ nixos-rebuild switch --flake .#nixos-hermes \
   --use-remote-sudo
 ```
 
-CI publishes the flake to FlakeHub on every push to `main`. There is no automated deploy; all applies are manual.
+CI publishes the flake to FlakeHub on every push to `main`. Requires `FLAKEHUB_TOKEN`
+set as a GitHub Actions repository secret. There is no automated deploy; all applies are manual.
 
 ---
 

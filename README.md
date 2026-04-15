@@ -147,6 +147,11 @@ cp /path/to/age.key /mnt/etc/secrets/age.key
 chmod 600 /mnt/etc/secrets/age.key
 ```
 
+> **Note:** The SSH host key (`/etc/ssh/ssh_host_ed25519_key`) does not need
+> manual placement. sops-nix decrypts it from `hosts/hermes/secrets/ssh_host_ed25519_key.enc`
+> during `nixos-install` activation, using the age key placed in step 3.
+
+
 ### 4. Install the Flake
 
 ```bash
@@ -186,8 +191,8 @@ nixos-rebuild switch --flake .#nixos-hermes \
 ## CI
 
 GitHub Actions publishes the flake to FlakeHub on every push to `main` using the
-[DeterminateSystems](https://determinate.systems/) stack. No secrets or deploy
-credentials are required in CI.
+[DeterminateSystems](https://determinate.systems/) stack. Requires one repository
+secret: `FLAKEHUB_TOKEN` (set under Settings → Secrets and variables → Actions).
 
 ---
 
