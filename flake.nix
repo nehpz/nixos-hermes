@@ -18,6 +18,15 @@
       hermes-agent,
       ...
     }@inputs:
+    let
+      # Dev tools run on the contributor's machine, not the NixOS host.
+      # Support both Apple Silicon and x86_64 Linux development environments.
+      devSystems = [
+        "aarch64-darwin"
+        "x86_64-linux"
+      ];
+      forDevSystems = nixpkgs.lib.genAttrs devSystems;
+    in
     {
       nixosConfigurations.nixos-hermes = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit inputs; };
@@ -28,5 +37,25 @@
           ./hosts/hermes
         ];
       };
+
+      devShells = forDevSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.mkShell {
+            packages = [
+              pkgs.prek
+              pkgs.nixfmt-rfc-style
+              pkgs.sops
+            ];
+            shellHook = ''
+              prek install --hook-type pre-commit 2>/dev/null || true
+              prek install --hook-type pre-push 2>/dev/null || true
+            '';
+          };
+        }
+      );
     };
 }
