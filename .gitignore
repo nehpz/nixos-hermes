@@ -28,7 +28,6 @@
 .env.test.local
 .env.production.local
 .secrets/
-/docs/
 
 #
 

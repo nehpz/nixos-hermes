@@ -5,19 +5,19 @@ working on this repository. Read it before touching any file.
 
 ---
 
-## Project in one sentence
+## Project in One Sentence
 
 A fully declarative NixOS flake configuration for a bare-metal AI agent host
 running `hermes-agent` (NousResearch) as a systemd service, delivering a personal, always-on assistant.
 
 ---
 
-## Repository layout
+## Repository Layout
 
 ```text
 nixos-hermes/
 ├── flake.nix                            # flake inputs/outputs, host definition
-├── .github/workflows/nix-ci.yml         # CI: nix flake check on push to main
+├── .github/workflows/flakehub-publish-rolling.yml # CI: publish to FlakeHub on push to main
 ├── .sops.yaml                           # sops encryption policy (age)
 ├── .secrets/                            # GITIGNORED — plaintext secrets, local only
 │   └── hermes-secrets.yaml              # never commit; encrypt before use
@@ -36,7 +36,7 @@ nixos-hermes/
 
 ---
 
-## Technology stack
+## Technology Stack
 
 | Layer | Tool |
 |-------|------|
@@ -50,35 +50,10 @@ nixos-hermes/
 
 ---
 
-## Known defects (fix before first build)
 
-The following defects existed in the initial state and have since been resolved.
-This section is retained as a reference for anyone bootstrapping from the git
-history or reviewing the commit that introduced the fixes.
+## Coding Conventions
 
-1. **`lib` not in scope** — `configuration.nix` used `lib.mkDefault` without
-   `lib` in its module args. Fixed by adding `lib` to the function head.
-
-2. **Wrong option name** — `networking.firewall.enabled` does not exist in
-   NixOS. Corrected to `networking.firewall.enable`.
-
-3. **Missing root filesystem mount** — `hardware-configuration.nix` had no
-   `fileSystems."/"` entry for `rpool/root/nixos`.
-
-4. **`sops.nix` not imported** — the file existed but was never listed in
-   `configuration.nix` imports, so no secrets would be decrypted at activation.
-
-5. **`openssh.hostKeys` missing `type`** — the entry lacked `type = "ed25519"`,
-   causing NixOS to default to RSA and mishandle the key path.
-
-6. **`Sudo` gap** — `admin` has `wheel` but no password; without
-   `security.sudo.wheelNeedsPassword = false`, `sudo` would prompt and hang.
-
----
-
-## Coding conventions
-
-### Nix style
+### Nix Style
 
 - Module function heads use named args: `{ config, pkgs, lib, ... }:`
 - One logical concern per file; do not conflate hardware and service config.
@@ -110,7 +85,7 @@ history or reviewing the commit that introduced the fixes.
 - `admin` has `wheel` and should have `security.sudo.wheelNeedsPassword = false`
   set (or equivalent) since there is no password configured.
 
-### Git hygiene
+### Git Hygiene
 
 - The repo is **public**. Never commit SSH private keys, age private keys,
   plaintext secrets, IP-to-identity mappings, or personal information.
@@ -185,21 +160,21 @@ keys should appear. Lives in `modules/` because it is portable across hosts.
 
 ---
 
-## Testing and validation
+## Testing and Validation
 
-### Local check (no host needed)
+### Local Check (No Host Needed)
 
 ```bash
 nix flake check
 ```
 
-### Dry-run build (evaluates but does not activate)
+### Dry-Run Build (Evaluates but Does Not Activate)
 
 ```bash
 nixos-rebuild dry-build --flake .#nixos-hermes
 ```
 
-### First install (live CD)
+### First Install (Live CD)
 
 The `determinate.nixosModules.default` module installs Determinate Nix from
 FlakeHub. On first install, pass extra substituter flags so Nix doesn't have to
@@ -215,7 +190,7 @@ These flags are only required for the initial install. Once Determinate Nix
 v3.6.0 or later is running on the host, subsequent `nixos-rebuild` runs need no
 extra options.
 
-### Apply to host
+### Apply to Host
 
 ```bash
 # Build and activate on the host directly:
@@ -228,8 +203,7 @@ nixos-rebuild switch --flake .#nixos-hermes \
   --use-remote-sudo
 ```
 
-CI runs `nix flake check` automatically on push to `main`. There is no
-automated deploy; all applies are manual.
+CI publishes the flake to FlakeHub on every push to `main`. There is no automated deploy; all applies are manual.
 
 ---
 
@@ -393,10 +367,10 @@ configured in this deployment; full list at hermes-agent docs.
 
 ## Deployment Topology
 
-```
+```text
 GitHub (nehpz/nixos-hermes)
     │
-    ├─ push to main → CI: nix flake check (validate only)
+    ├─ push to main → CI: publish flake to FlakeHub
     │
     └─ manual: nixos-rebuild switch → nixos-hermes
                                            │

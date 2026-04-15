@@ -44,7 +44,7 @@ replicates the primary ESP to the fallback via `rsync`.
 
 ZFS ARC is capped at 16GB to leave headroom for the agent workload.
 
-### Remote unlock
+### Remote Unlock
 
 The pool is encrypted. On each cold boot, the initrd brings up the NIC and
 exposes an SSH server (port 22, same ed25519 host key as the main system).
@@ -61,15 +61,15 @@ ssh root@<host-ip>
 After unlocking, the main system comes up and `nixos-hermes` resolves normally
 via your local DNS for all subsequent access.
 
-### Secrets management
+### Secrets Management
 
 Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and
 [age](https://github.com/FiloSottile/age). The age host key lives at
 `/etc/secrets/age.key` (generated once, placed manually during bootstrap).
-Encrypted secrets live under `nixos/secrets/` and are decrypted at activation
+Encrypted secrets live under `hosts/hermes/secrets/` and are decrypted at activation
 time.
 
-### Hermes agent
+### Hermes Agent
 
 Declared via the official `hermes-agent.nixosModules.default` NixOS module,
 sourced from `github:NousResearch/hermes-agent`. Agent state persists in
@@ -91,12 +91,12 @@ gateway. Update your SSH config when it changes.
 
 ---
 
-## Repository layout
+## Repository Layout
 
 ```text
 nixos-hermes/
 ├── flake.nix                          # Flake inputs/outputs, host definition
-├── .github/workflows/nix-ci.yml       # CI: flake check on push to main
+├── .github/workflows/flakehub-publish-rolling.yml  # CI: publish to FlakeHub on push to main
 ├── .sops.yaml                         # sops encryption rules (age keys)
 ├── .secrets/                          # gitignored — plaintext secrets (local only)
 │   └── hermes-secrets.yaml            # template; encrypt before committing
@@ -115,19 +115,19 @@ nixos-hermes/
 
 ---
 
-## Bootstrapping the host
+## Bootstrapping the Host
 
 > These steps are performed once from the NixOS live ISO. The host must be
 > reachable over SSH.
 
-### 1. Partition and format the drives
+### 1. Partition and Format the Drives
 
 ```bash
 nix run github:nix-community/disko -- \
   --mode disko hosts/hermes/disk-config.nix
 ```
 
-### 2. Generate and place the ZFS encryption key
+### 2. Generate and Place the ZFS Encryption Key
 
 ```bash
 mkdir -p /mnt/etc/secrets
@@ -138,7 +138,7 @@ zpool import -d /dev/disk/by-id rpool
 zfs load-key -L file:///mnt/etc/secrets/zfs.key rpool
 ```
 
-### 3. Place the age key
+### 3. Place the Age Key
 
 ```bash
 mkdir -p /mnt/etc/secrets
@@ -147,13 +147,13 @@ cp /path/to/age.key /mnt/etc/secrets/age.key
 chmod 600 /mnt/etc/secrets/age.key
 ```
 
-### 4. Install the flake
+### 4. Install the Flake
 
 ```bash
 nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes
 ```
 
-### 5. Reboot and unlock
+### 5. Reboot and Unlock
 
 ```bash
 reboot
@@ -164,10 +164,10 @@ ssh root@<host-ip>
 
 ---
 
-## Applying the changes
+## Applying the Changes
 
-There is no automated deployment step yet. After pushing to `main` (CI validates
-the flake), apply changes manually:
+There is no automated deployment step yet. After pushing to `main`, apply changes
+manually:
 
 ```bash
 ssh admin@nixos-hermes
@@ -185,22 +185,12 @@ nixos-rebuild switch --flake .#nixos-hermes \
 
 ## CI
 
-GitHub Actions runs `nix flake check` on every push to `main` using the
-[DeterminateSystems](https://determinate.systems/) Nix stack and FlakeHub
-binary cache. No secrets or deploy credentials are required in CI.
+GitHub Actions publishes the flake to FlakeHub on every push to `main` using the
+[DeterminateSystems](https://determinate.systems/) stack. No secrets or deploy
+credentials are required in CI.
 
 ---
 
-## Design decisions
+## Design Decisions
 
-- **Immutable users** (`mutableUsers = false`): all user configuration is
-  declarative; no password-based login.
-- **Firewall disabled**: trusted LAN segment; simplifies agent networking.
-- **Dual ESP + rsync replication**: survives a single drive failure without
-  losing the ability to boot.
-- **No swap**: 96GB RAM makes swap unnecessary; `vm.swappiness = 0` prevents
-  kernel speculation.
-- **NVMe power management disabled** (`nvme_core.default_ps_max_latency_us=0`):
-  trades idle power for consistent low-latency I/O.
-- **`schedutil` CPU governor**: lets the kernel adapt frequency to load; more
-  responsive than `powersave`, more efficient than `performance`.
+Architectural decisions are documented as ADRs in [`docs/`](docs/).
