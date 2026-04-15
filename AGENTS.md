@@ -191,32 +191,20 @@ cd /root/nixos-hermes
 # Partition, format ESPs, create zpool and datasets
 nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
 
-# Mount ZFS datasets (disko does not mount legacy-mountpoint datasets)
+# Mount ZFS datasets (disko does not mount legacy-mountpoint datasets).
+# The ZFS root must come first — all other mountpoints are subdirectories of it.
 mount -t zfs rpool/root/nixos /mnt
-mkdir -p /mnt/{nix,var,var/lib/hermes,data/backup}
+mkdir -p /mnt/{boot,boot-fallback,nix,var,var/lib/hermes,data/backup}
+mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
+mount /dev/disk/by-partlabel/disk-nvme1-ESP /mnt/boot-fallback
 mount -t zfs rpool/nix /mnt/nix
 mount -t zfs rpool/var /mnt/var
 mount -t zfs rpool/data/hermes /mnt/var/lib/hermes
 mount -t zfs rpool/data/backup /mnt/data/backup
 
-# Copy the age key into the target system for sops-nix runtime secret management
-mkdir -p /mnt/etc/secrets && cp /etc/secrets/age.key /mnt/etc/secrets/age.key
-
-# Pre-place the SSH host key so boot.initrd.secrets can bake it into the initrd.
-# sops-nix is a runtime service and hasn't run yet at this point; without this
-# step the initrd gets an ephemeral key and the fingerprint changes every install.
-mkdir -p /mnt/etc/ssh
-SOPS_AGE_KEY_FILE=/etc/secrets/age.key nix run nixpkgs#sops -- --decrypt --output-type binary hosts/hermes/secrets/ssh_host_ed25519_key.enc > /mnt/etc/ssh/ssh_host_ed25519_key
-chmod 600 /mnt/etc/ssh/ssh_host_ed25519_key
-
-# Verify ESPs are still mounted — nixos-enter uses unshare --mount which can
-# lose mounts with private propagation; remount if missing.
-mount | grep boot
-# Expected: /dev/nvme0n1p1 on /mnt/boot and /dev/nvme1n1p1 on /mnt/boot-fallback
-# If either is missing:
-mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
-mount /dev/disk/by-partlabel/disk-nvme1-ESP /mnt/boot-fallback
-
+# Verify all mounts are present before proceeding.
+# nixos-enter uses unshare --mount; any missing mount here will be missing inside the chroot.
+mount | grep /mnt
 
 # Install
 nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://cache.flakehub.com --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='

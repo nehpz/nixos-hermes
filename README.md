@@ -134,7 +134,9 @@ It does **not** mount legacy-mountpoint ZFS datasets.
 
 ```bash
 mount -t zfs rpool/root/nixos /mnt
-mkdir -p /mnt/{nix,var,var/lib/hermes,data/backup}
+mkdir -p /mnt/{boot,boot-fallback,nix,var,var/lib/hermes,data/backup}
+mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
+mount /dev/disk/by-partlabel/disk-nvme1-ESP /mnt/boot-fallback
 mount -t zfs rpool/nix /mnt/nix
 mount -t zfs rpool/var /mnt/var
 mount -t zfs rpool/data/hermes /mnt/var/lib/hermes
