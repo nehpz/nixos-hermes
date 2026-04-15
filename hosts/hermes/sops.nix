@@ -23,16 +23,16 @@
       mode  = "0400";
     };
 
-    # OAuth credentials seed for the OpenAI Codex provider (auth.json format).
-    # Passed to services.hermes-agent.authFile.
-    codex_auth_json = {
+    # OAuth bootstrap credentials for hermes-agent providers.
+    # authFileForceOverwrite = false (default) means these seed auth.json on
+    # first activation only; runtime token refreshes are never overwritten.
+    # To re-auth: update tokens here, set authFileForceOverwrite = true, rebuild,
+    # then revert to false.
+    anthropic_auth_json = {
       owner = "hermes";
       mode  = "0400";
     };
-
-    # OAuth credentials seed for the Anthropic provider (auth.json format).
-    # Passed to services.hermes-agent.authFile.
-    anthropic_auth_json = {
+    codex_auth_json = {
       owner = "hermes";
       mode  = "0400";
     };

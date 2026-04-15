@@ -2,22 +2,21 @@
 
 NixOS configuration for **hermes** — a dedicated bare-metal host for running
 [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) as a
-personal, always-on AI assistant. The machine is a production-grade homelab
-node: no pager-duty SLAs, but downtime means no value.
+personal, always-on AI assistant.
 
-Secondary goals: learn NixOS/Nix as a discipline, and leave room to run
+Secondary goals: learn NixOS/Nix as a discipline and leave room to run
 multiple agents concurrently as capabilities grow.
 
 ---
 
 ## Hardware
 
-| Component | Spec |
-|-----------|------|
-| Host | HP Elite Mini 800 G9 |
-| CPU | Intel Core i5-14500T (14-core, Raptor Lake) |
-| RAM | 96 GB DDR5-5600 |
-| Storage | 2 × 2 TB Samsung 990 Pro NVMe (ZFS mirror) |
+| Component | Spec                                                   |
+|-----------|--------------------------------------------------------|
+| Host | HP Elite Mini 800 G9                                   |
+| CPU | Intel Core i5-14500T (14-core, Raptor Lake)            |
+| RAM | 96GB DDR5-5600                                         |
+| Storage | 2 × 2TB Samsung 990 Pro NVMe SSD (ZFS mirror)          |
 | GPU | None (Intel Arc iGPU only, Quick Sync / VA-API enabled) |
 
 ---
@@ -29,54 +28,46 @@ multiple agents concurrently as capabilities grow.
 ZFS mirror pool (`rpool`) spanning both NVMe drives, encrypted with a raw key
 stored at `/etc/secrets/zfs.key`. Dataset layout:
 
-```
+```text
 rpool
-├── root/nixos      → /           (legacy mount, OS root)
-├── nix             → /nix        (zstd, Nix store)
-├── var             → /var        (runtime state)
+├── root/nixos      → /                 (legacy mount, OS root)
+├── nix             → /nix              (zstd, Nix store)
+├── var             → /var              (runtime state)
 └── data
     ├── hermes      → /var/lib/hermes   (16K recordsize, agent home)
     └── backup      → /data/backup      (zstd, 1M records, atime off)
 ```
 
-Each NVMe also carries a 1 GB FAT32 ESP. The primary ESP mounts at `/boot`;
+Each NVMe also carries a 1GB FAT32 ESP. The primary ESP mounts at `/boot`;
 the secondary at `/boot-fallback`. On every `nixos-rebuild switch`, systemd-boot
 replicates the primary ESP to the fallback via `rsync`.
 
-ZFS ARC is capped at 16 GB to leave headroom for the agent workload.
+ZFS ARC is capped at 16GB to leave headroom for the agent workload.
 
 ### Remote Unlock
 
 The pool is encrypted. On each cold boot, the initrd brings up the NIC and
 exposes an SSH server (port 22, same ed25519 host key as the main system).
+
 Unlock procedure:
 
-```
+```bash
 # initrd has no DNS resolver — use the host IP, not the hostname
 ssh root@<host-ip>
 # the shell auto-runs:  zfs load-key -a; killall zfs
 # system continues booting
 ```
 
-After unlock, the main system comes up and `nixos-hermes` resolves normally
+After unlocking, the main system comes up and `nixos-hermes` resolves normally
 via your local DNS for all subsequent access.
 
-### Secrets
+### Secrets Management
 
 Secrets are managed with [sops-nix](https://github.com/Mic92/sops-nix) and
 [age](https://github.com/FiloSottile/age). The age host key lives at
 `/etc/secrets/age.key` (generated once, placed manually during bootstrap).
-Encrypted secrets live under `nixos/secrets/` and are decrypted at activation
+Encrypted secrets live under `hosts/hermes/secrets/` and are decrypted at activation
 time.
-
-Currently managed secrets:
-
-| Secret | Purpose |
-|--------|---------|
-| `ssh_host_ed25519_key` | Stable SSH host identity across rebuilds |
-| `codex_auth_json` | OpenAI Codex authentication for hermes-agent |
-| `elevenlabs_api_key` | ElevenLabs TTS for hermes-agent voice output |
-| `discord_bot_token` | Discord integration for hermes-agent |
 
 ### Hermes Agent
 
@@ -102,12 +93,12 @@ gateway. Update your SSH config when it changes.
 
 ## Repository Layout
 
-```
+```text
 nixos-hermes/
-├── flake.nix                            # Flake inputs/outputs, host definition
-├── .github/workflows/nix-ci.yml         # CI: flake check on push to main
-├── .sops.yaml                           # sops encryption rules (age keys)
-├── .secrets/                            # gitignored — plaintext secrets (local only)
+├── flake.nix                          # Flake inputs/outputs, host definition
+├── .github/workflows/flakehub-publish-rolling.yml  # CI: publish to FlakeHub on push to main
+├── .sops.yaml                         # sops encryption rules (age keys)
+├── .secrets/                          # gitignored — plaintext secrets (local only)
 │   └── hermes-secrets.yaml            # template; encrypt before committing
 ├── hosts/
 │   └── hermes/
@@ -124,19 +115,19 @@ nixos-hermes/
 
 ---
 
-## Bootstrap (First Install)
+## Bootstrapping the Host
 
 > These steps are performed once from the NixOS live ISO. The host must be
 > reachable over SSH.
 
-### 1. Partition and format
+### 1. Partition and Format the Drives
 
 ```bash
 nix run github:nix-community/disko -- \
   --mode disko hosts/hermes/disk-config.nix
 ```
 
-### 2. Place the ZFS encryption key
+### 2. Generate and Place the ZFS Encryption Key
 
 ```bash
 mkdir -p /mnt/etc/secrets
@@ -147,7 +138,7 @@ zpool import -d /dev/disk/by-id rpool
 zfs load-key -L file:///mnt/etc/secrets/zfs.key rpool
 ```
 
-### 3. Place the age key
+### 3. Place the Age Key
 
 ```bash
 mkdir -p /mnt/etc/secrets
@@ -156,13 +147,18 @@ cp /path/to/age.key /mnt/etc/secrets/age.key
 chmod 600 /mnt/etc/secrets/age.key
 ```
 
-### 4. Install
+> **Note:** The SSH host key (`/etc/ssh/ssh_host_ed25519_key`) does not need
+> manual placement. sops-nix decrypts it from `hosts/hermes/secrets/ssh_host_ed25519_key.enc`
+> during `nixos-install` activation, using the age key placed in step 3.
+
+
+### 4. Install the Flake
 
 ```bash
 nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes
 ```
 
-### 5. Reboot and unlock
+### 5. Reboot and Unlock
 
 ```bash
 reboot
@@ -173,10 +169,10 @@ ssh root@<host-ip>
 
 ---
 
-## Applying Changes
+## Applying the Changes
 
-There is no automated deploy step yet. After pushing to `main` (CI validates
-the flake), apply changes manually:
+There is no automated deployment step yet. After pushing to `main`, apply changes
+manually:
 
 ```bash
 ssh admin@nixos-hermes
@@ -194,22 +190,12 @@ nixos-rebuild switch --flake .#nixos-hermes \
 
 ## CI
 
-GitHub Actions runs `nix flake check` on every push to `main` using the
-[DeterminateSystems](https://determinate.systems/) Nix stack and FlakeHub
-binary cache. No secrets or deploy credentials are required in CI.
+GitHub Actions publishes the flake to FlakeHub on every push to `main` using the
+[DeterminateSystems](https://determinate.systems/) stack. Requires one repository
+secret: `FLAKEHUB_TOKEN` (set under Settings → Secrets and variables → Actions).
 
 ---
 
 ## Design Decisions
 
-- **Immutable users** (`mutableUsers = false`): all user configuration is
-  declarative; no password-based login.
-- **Firewall disabled**: trusted LAN segment; simplifies agent networking.
-- **Dual ESP + rsync replication**: survives a single drive failure without
-  losing bootability.
-- **No swap**: 96 GB RAM makes swap unnecessary; `vm.swappiness = 0` prevents
-  kernel speculation.
-- **NVMe power management disabled** (`nvme_core.default_ps_max_latency_us=0`):
-  trades idle power for consistent low-latency I/O.
-- **`schedutil` CPU governor**: lets the kernel adapt frequency to load; more
-  responsive than `powersave`, more efficient than `performance`.
+Architectural decisions are documented as ADRs in [`docs/adr/`](docs/adr/).

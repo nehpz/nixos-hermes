@@ -8,30 +8,30 @@ working on this repository. Read it before touching any file.
 ## Project in One Sentence
 
 A fully declarative NixOS flake configuration for a bare-metal AI agent host
-running `hermes-agent` (NousResearch) as a personal, always-on assistant.
+running `hermes-agent` (NousResearch) as a systemd service, delivering a personal, always-on assistant.
 
 ---
 
 ## Repository Layout
 
-```
+```text
 nixos-hermes/
 ├── flake.nix                            # flake inputs/outputs, host definition
-├── .github/workflows/nix-ci.yml         # CI: nix flake check on push to main
+├── .github/workflows/flakehub-publish-rolling.yml # CI: publish to FlakeHub on push to main
 ├── .sops.yaml                           # sops encryption policy (age)
 ├── .secrets/                            # GITIGNORED — plaintext secrets, local only
-│   └── hermes-secrets.yaml            # never commit; encrypt before use
+│   └── hermes-secrets.yaml              # never commit; encrypt before use
 ├── hosts/
 │   └── hermes/
-│       ├── default.nix                # host entry: identity constants + imports
-│       ├── hardware.nix               # boot, initrd, filesystems, kernel, GPU
-│       ├── sops.nix                   # sops-nix secret bindings (host-specific)
-│       ├── disk-config.nix            # disko layout (install-time, not imported)
-│       └── secrets/                   # committed SOPS-encrypted files
+│       ├── default.nix                  # host entry: identity constants + imports
+│       ├── disk-config.nix              # disko layout (install-time, not imported)
+│       ├── hardware.nix                 # boot, initrd, filesystems, kernel, GPU
+│       ├── sops.nix                     # sops-nix secret bindings (host-specific)
+│       └── secrets/                     # committed SOPS-encrypted files
 └── modules/
-    ├── system.nix                     # locale, tz, networking, packages, sudo
-    ├── hermes-agent.nix               # hermes service declaration
-    └── users.nix                      # immutable user + SSH key declarations
+    ├── system.nix                       # locale, tz, networking, packages, sudo
+    ├── hermes-agent.nix                 # hermes service declaration
+    └── users.nix                        # immutable user + SSH key declarations
 ```
 
 ---
@@ -40,7 +40,7 @@ nixos-hermes/
 
 | Layer | Tool |
 |-------|------|
-| OS | NixOS (nixos-unstable) |
+| OS | NixOS (nixpkgs unstable via FlakeHub `NixOS/nixpkgs/0`) |
 | Nix runtime | Determinate Nix (via `determinate` flake input) |
 | Secret management | sops-nix + age |
 | Storage | ZFS (`rpool`, mirror, encrypted) |
@@ -50,36 +50,11 @@ nixos-hermes/
 
 ---
 
-## Known Bugs (Fix Before First Build)
-
-The following defects existed in the initial state and have since been resolved.
-This section is retained as reference for anyone bootstrapping from the git
-history or reviewing the commit that introduced the fixes.
-
-1. **`lib` not in scope** — `configuration.nix` used `lib.mkDefault` without
-   `lib` in its module args. Fixed by adding `lib` to the function head.
-
-2. **Wrong option name** — `networking.firewall.enabled` does not exist in
-   NixOS. Corrected to `networking.firewall.enable`.
-
-3. **Missing root filesystem mount** — `hardware-configuration.nix` had no
-   `fileSystems."/"` entry for `rpool/root/nixos`. Added.
-
-4. **`sops.nix` not imported** — the file existed but was never listed in
-   `configuration.nix` imports, so no secrets would be decrypted at activation.
-   Fixed by adding `./sops.nix` to the imports list.
-
-5. **`openssh.hostKeys` missing `type`** — the entry lacked `type = "ed25519"`,
-   causing NixOS to default to RSA and mishandle the key path. Fixed.
-
-6. **Sudo gap** — `admin` has `wheel` but no password; without
-   `security.sudo.wheelNeedsPassword = false`, sudo would prompt and hang.
-   Fixed.
----
 
 ## Coding Conventions
 
-### Nix style
+### Nix Style
+
 - Module function heads use named args: `{ config, pkgs, lib, ... }:`
 - One logical concern per file; do not conflate hardware and service config.
 - Prefer `lib.mkDefault` only at genuine override boundaries; omit where the
@@ -87,28 +62,31 @@ history or reviewing the commit that introduced the fixes.
 - Comments explain *why*, not *what* the code already says.
 
 ### Secrets
-- **Never commit plaintext secrets.** `.secrets/` is gitignored; it exists
+
+- **Never commit plaintext secrets.** `.secrets/` is `.gitignore`d; it exists
   only for local templating.
 - The committed encrypted files live under `hosts/hermes/secrets/` with `.enc`
   suffixes (e.g., `hermes-secrets.yaml.enc`).
-- The sops age key is `/etc/secrets/age.key` on the host. The corresponding
+- The `sops age` key is `/etc/secrets/age.key` on the host. The corresponding
   public key is registered in `.sops.yaml`. Do not change the public key in
   `.sops.yaml` without re-encrypting every secret file.
-- `.secrets/hermes-secrets.yaml` is the plaintext template (gitignored). Workflow:
+- `.secrets/hermes-secrets.yaml` is the plaintext template (`gitignored`). Workflow:
   edit locally → `sops --encrypt .secrets/hermes-secrets.yaml > hosts/hermes/secrets/hermes-secrets.yaml.enc`
   → commit the `.enc` file → never commit the plaintext.
 - When adding a new secret key: add it to `.secrets/hermes-secrets.yaml`, add the
   `sops.secrets.<name>` binding in `hosts/hermes/sops.nix`, then re-encrypt.
 
 ### Users
+
 - `users.mutableUsers = false` — the NixOS activation will reject any user
   state not described in `users.nix`. Do not add users imperatively on the host.
-- Authentication is SSH key only. Do not add password hashes unless explicitly
+- Authentication is via SSH key only. Do not add password hashes unless explicitly
   requested.
 - `admin` has `wheel` and should have `security.sudo.wheelNeedsPassword = false`
   set (or equivalent) since there is no password configured.
 
-### Git hygiene
+### Git Hygiene
+
 - The repo is **public**. Never commit SSH private keys, age private keys,
   plaintext secrets, IP-to-identity mappings, or personal information.
 - The public SSH authorized keys already in the repo are acceptable (they are
@@ -122,54 +100,98 @@ history or reviewing the commit that introduced the fixes.
 ## What Each File Owns
 
 ### `flake.nix`
+
 Single host output: `nixosConfigurations.nixos-hermes`. Manages input pins.
 Do not add multiple hosts without a corresponding refactor of the module tree.
 
+**`nixosModules.default` convention:** In flake outputs, `.default` is the
+canonical name for a flake's primary export of a given type — analogous to
+`packages.default`. `determinate.nixosModules.default` and
+`hermes-agent.nixosModules.default` are values from two entirely separate
+flakes; naming collision is impossible. The NixOS module system merges all
+entries in the `modules` list regardless of where they came from.
+
+**`determinate.nixosModules.default` owns `nix.package`.** Do not set
+`nix.package` elsewhere in the module tree — the Determinate module manages
+it. Duplicate declarations will cause an evaluation error.
+
+**All flake inputs use FlakeHub URLs.** `NixOS/nixpkgs/0` is FlakeHub's semver
+alias for nixpkgs unstable (`0` = pre-1.0 channel). Do not switch individual
+inputs back to raw GitHub URLs — FlakeHub Cache works best when all inputs are
+FlakeHub-sourced.
+
 ### `hosts/hermes/default.nix`
+
 Host entry point. Contains machine-specific identity constants (`hostName`,
 `hostId`, `stateVersion`, `hostPlatform`) and the import list. Nothing else.
 These constants must never be extracted into shared modules.
 
 ### `hosts/hermes/hardware.nix`
+
 Everything tied to physical hardware: initrd modules, kernel params, filesystem
 mounts, bootloader, GPU packages, initrd SSH server for remote ZFS unlock.
 
 ### `hosts/hermes/disk-config.nix`
+
 Declarative disk layout consumed by disko at install time. Describes GPT
 partitions and the ZFS pool/dataset structure. After first install this file is
 reference documentation — changing it does not reformat disks.
 
 ### `hosts/hermes/sops.nix`
+
 Maps SOPS-encrypted files to runtime paths. Lives alongside `secrets/` so that
-`./secrets/...` paths resolve correctly. The age key path (`/etc/secrets/age.key`)
+`./secrets/...` paths resolve correctly. The `sops age` key path (`/etc/secrets/age.key`)
 must not change without updating this file.
 
 ### `modules/system.nix`
+
 Base system settings: locale, timezone, networking, openssh, sudo, packages,
 and session variables. No host-specific values.
 
 ### `modules/hermes-agent.nix`
-The hermes-agent service declaration. All `services.hermes-agent.*` options
+
+The `hermes-agent` service declaration. All `services.hermes-agent.*` options
 live here. Secrets are referenced by name from the sops bindings.
 
 ### `modules/users.nix`
+
 Immutable user definitions. The only place user accounts and authorized SSH
 keys should appear. Lives in `modules/` because it is portable across hosts.
+
 ---
 
 ## Testing and Validation
 
-### Local check (no host needed)
+### Local Check (No Host Needed)
+
 ```bash
 nix flake check
 ```
 
-### Dry-run build (evaluates but does not activate)
+### Dry-Run Build (Evaluates but Does Not Activate)
+
 ```bash
 nixos-rebuild dry-build --flake .#nixos-hermes
 ```
 
-### Apply to host
+### First Install (Live CD)
+
+The `determinate.nixosModules.default` module installs Determinate Nix from
+FlakeHub. On first install, pass extra substituter flags so Nix doesn't have to
+build it from source:
+
+```bash
+nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes \
+  --option extra-substituters https://install.determinate.systems \
+  --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
+```
+
+These flags are only required for the initial install. Once Determinate Nix
+v3.6.0 or later is running on the host, subsequent `nixos-rebuild` runs need no
+extra options.
+
+### Apply to Host
+
 ```bash
 # Build and activate on the host directly:
 ssh admin@nixos-hermes 'sudo nixos-rebuild switch --flake github:nehpz/nixos-hermes#nixos-hermes'
@@ -181,8 +203,8 @@ nixos-rebuild switch --flake .#nixos-hermes \
   --use-remote-sudo
 ```
 
-CI runs `nix flake check` automatically on push to `main`. There is no
-automated deploy; all applies are manual.
+CI publishes the flake to FlakeHub on every push to `main`. Requires `FLAKEHUB_TOKEN`
+set as a GitHub Actions repository secret. There is no automated deploy; all applies are manual.
 
 ---
 
@@ -211,12 +233,20 @@ The service runs natively (no container mode) as the `hermes` user.
 and starts the gateway systemd unit.
 
 Key option decisions:
-- `authFile`: seeds `auth.json` for Anthropic OAuth on first deploy only.
-  Preserved on subsequent rebuilds so runtime token refreshes survive.
-  Set `authFileForceOverwrite = true` to force re-seed after re-auth.
+- **`authFile` is bootstrap-only.** In managed mode, `hermes gateway install`
+  and interactive auth commands are blocked. `authFile` is the only way to seed
+  credentials on first activation. `authFileForceOverwrite = false` (the default)
+  means the sops-stored token seeds `auth.json` once and is never applied again;
+  runtime token refreshes made by hermes persist on the ZFS dataset across all
+  subsequent rebuilds. The token in sops goes stale but is never re-applied — this
+  is intentional. Providers can be swapped or run concurrently; each has its own
+  sops binding (`anthropic_auth_json`, `codex_auth_json`).
+- **Re-auth procedure:** obtain fresh tokens, update the plaintext in `.secrets/hermes-secrets.yaml`,
+  re-encrypt, set `authFileForceOverwrite = true` in `hermes-agent.nix`, rebuild,
+  then revert `authFileForceOverwrite` to false and rebuild again.
 - `environmentFiles`: points at the `hermes-env` sops secret, a `KEY=value` env
   file merged into `$HERMES_HOME/.env` at activation.
-  Current keys: `ELEVENLABS_API_KEY`, `DISCORD_BOT_TOKEN` (add when ready).
+  Current keys: `ELEVENLABS_API_KEY`, `DISCORD_BOT_TOKEN`.
 - `settings.tts.elevenlabs.voice_id`: not secret — a public ElevenLabs voice
   identifier. Fill in from elevenlabs.io/app → Voices → copy voice ID.
 - `HERMES_HOME` and `HERMES_MANAGED` are **owned by the module**.
@@ -225,13 +255,13 @@ Key option decisions:
   `environment.sessionVariables`.
 
 Diagnostic commands:
+
 ```bash
 systemctl status hermes-agent
 journalctl -u hermes-agent -f
 sudo -u hermes cat /var/lib/hermes/.hermes/.env   # verify secrets loaded
 hermes version                                     # confirms CLI shares state
 ```
-
 
 ---
 
@@ -240,6 +270,7 @@ hermes version                                     # confirms CLI shares state
 Sourced from hermes-agent source + DeepWiki. Do not re-research these.
 
 ### Developer Portal Setup
+
 1. Create application at discord.com/developers
 2. Bot → Reset Token → copy as `DISCORD_BOT_TOKEN`
 3. Bot → Privileged Gateway Intents → enable **all three**:
@@ -252,6 +283,7 @@ Sourced from hermes-agent source + DeepWiki. Do not re-research these.
 6. Bot Permissions: enter integer `70680166124608`
 
 ### Bot Permissions (integer 70680166124608)
+
 | Permission | Purpose |
 |---|---|
 | View Channels | Fundamental |
@@ -277,6 +309,7 @@ ElevenLabs audio delivery:
   to file attachment if the voice bubble API fails
 
 ### Environment Variables (Discord)
+
 All go in `hermes-env` secret (merged to `$HERMES_HOME/.env`).
 
 | Variable | Required | Description |
@@ -296,6 +329,7 @@ All go in `hermes-env` secret (merged to `$HERMES_HOME/.env`).
 | `DISCORD_ALLOW_BOTS` | No | Whether to process messages from other bots |
 
 ### Key Operational Notes
+
 - `DISCORD_ALLOWED_USERS` is mandatory in practice. Without it the gateway
   receives all server events but rejects every interaction.
 - The 1000-requests-per-day pattern with zero user activity is caused by all three
@@ -311,6 +345,7 @@ Keys for `hermes-env` sops secret (`$HERMES_HOME/.env`). Only list what is
 configured in this deployment; full list at hermes-agent docs.
 
 ### Active
+
 | Variable | Secret | Purpose |
 |---|---|---|
 | `ELEVENLABS_API_KEY` | Yes | TTS audio generation |
@@ -319,9 +354,10 @@ configured in this deployment; full list at hermes-agent docs.
 | `DISCORD_HOME_CHANNEL` | No | Channel ID for proactive messages |
 
 ### Provider Keys (add as needed)
+
 | Variable | Provider |
 |---|---|
-| `ANTHROPIC_API_KEY` / `ANTHROPIC_TOKEN` | Anthropic direct API (if not using OAuth authFile) |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_TOKEN` | Anthropic direct API (OAuth token lives on dataset, not in sops) |
 | `OPENROUTER_API_KEY` | OpenRouter (routes to any model) |
 | `OPENAI_API_KEY` | OpenAI direct |
 | `GROQ_API_KEY` | Groq Whisper STT |
@@ -332,10 +368,10 @@ configured in this deployment; full list at hermes-agent docs.
 
 ## Deployment Topology
 
-```
+```text
 GitHub (nehpz/nixos-hermes)
     │
-    ├─ push to main → CI: nix flake check (validate only)
+    ├─ push to main → CI: publish flake to FlakeHub
     │
     └─ manual: nixos-rebuild switch → nixos-hermes
                                            │
