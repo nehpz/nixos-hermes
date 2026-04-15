@@ -194,7 +194,7 @@ nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-conf
 # Mount ZFS datasets (disko does not mount legacy-mountpoint datasets).
 # The ZFS root must come first — all other mountpoints are subdirectories of it.
 mount -t zfs rpool/root/nixos /mnt
-mkdir -p /mnt/{boot,boot-fallback,nix,var,var/lib/hermes,data/backup}
+mkdir -p /mnt/boot /mnt/boot-fallback /mnt/nix /mnt/var/lib/hermes /mnt/data/backup
 mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
 mount /dev/disk/by-partlabel/disk-nvme1-ESP /mnt/boot-fallback
 mount -t zfs rpool/nix /mnt/nix
