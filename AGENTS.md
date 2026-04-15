@@ -209,6 +209,15 @@ mkdir -p /mnt/etc/ssh
 SOPS_AGE_KEY_FILE=/etc/secrets/age.key nix run nixpkgs#sops -- --decrypt --output-type binary hosts/hermes/secrets/ssh_host_ed25519_key.enc > /mnt/etc/ssh/ssh_host_ed25519_key
 chmod 600 /mnt/etc/ssh/ssh_host_ed25519_key
 
+# Verify ESPs are still mounted — nixos-enter uses unshare --mount which can
+# lose mounts with private propagation; remount if missing.
+mount | grep boot
+# Expected: /dev/nvme0n1p1 on /mnt/boot and /dev/nvme1n1p1 on /mnt/boot-fallback
+# If either is missing:
+mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
+mount /dev/disk/by-partlabel/disk-nvme1-ESP /mnt/boot-fallback
+
+
 # Install
 nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://install.determinate.systems --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
 
