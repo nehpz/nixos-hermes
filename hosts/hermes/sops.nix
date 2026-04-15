@@ -15,6 +15,16 @@
       path     = "/etc/ssh/ssh_host_ed25519_key";
     };
 
+    # ZFS pool encryption key — decrypted to /etc/secrets/zfs.key during activation.
+    # boot.initrd.secrets then bakes it into the initrd so the pool unlocks at boot.
+    zfs_key = {
+      sopsFile = ./secrets/zfs.key.enc;
+      format   = "binary";
+      owner    = "root";
+      mode     = "0400";
+      path     = "/etc/secrets/zfs.key";
+    };
+
     # Combined env file for hermes-agent: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN, etc.
     # Value is a newline-delimited KEY=value file; merged into $HERMES_HOME/.env
     # at activation time by the hermes-agent module.

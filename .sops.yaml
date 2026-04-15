@@ -11,3 +11,8 @@ creation_rules:
     key_groups:
       - age:
           - *host_key
+
+  - path_regex: hosts/hermes/secrets/.*
+    key_groups:
+      - age:
+          - *host_key

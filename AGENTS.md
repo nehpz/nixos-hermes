@@ -176,19 +176,44 @@ nixos-rebuild dry-build --flake .#nixos-hermes
 
 ### First Install (Live CD)
 
-The `determinate.nixosModules.default` module installs Determinate Nix from
-FlakeHub. On first install, pass extra substituter flags so Nix doesn't have to
-build it from source:
+The ZFS pool encryption key is managed by sops (`hosts/hermes/secrets/zfs.key.enc`).
+Disko needs the plaintext key on the live CD filesystem before it can create the
+encrypted pool. Decrypt it first:
 
 ```bash
+# Place the age private key so sops can decrypt
+mkdir -p /etc/secrets
+# Copy age.key from wherever you have it (USB, password manager, etc.)
+cp /path/to/age.key /etc/secrets/age.key
+
+# Clone the repo
+nix shell nixpkgs#git -c git clone https://github.com/nehpz/nixos-hermes /mnt/repo
+cd /mnt/repo
+
+# Decrypt the ZFS key for disko pool creation
+nix run nixpkgs#sops -- --decrypt --output-type binary \
+  hosts/hermes/secrets/zfs.key.enc > /etc/secrets/zfs.key
+
+# Partition, format, and mount everything
+nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
+
+# Place the age key on the target for sops-nix activation
+mkdir -p /mnt/etc/secrets
+cp /etc/secrets/age.key /mnt/etc/secrets/age.key
+
+# Install — sops-nix will decrypt all secrets (including zfs.key) into the
+# chroot during activation; initrd-secrets bakes zfs.key into the initrd.
 nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes \
   --option extra-substituters https://install.determinate.systems \
   --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
+
+# Verify before rebooting — if this directory is empty, activation failed.
+ls /mnt/boot/nixos/
 ```
 
-These flags are only required for the initial install. Once Determinate Nix
-v3.6.0 or later is running on the host, subsequent `nixos-rebuild` runs need no
-extra options.
+The `extra-substituters` flags are only required for the initial install. Once
+Determinate Nix v3.6.0 or later is running on the host, subsequent `nixos-rebuild`
+runs need no extra options.
 
 ### Apply to Host
 
@@ -196,15 +221,15 @@ extra options.
 # Build and activate on the host directly:
 ssh admin@nixos-hermes 'sudo nixos-rebuild switch --flake github:nehpz/nixos-hermes#nixos-hermes'
 
-# Or push from local checkout (builds on the host, required — see hardware.nix):
+# Or push from local checkout:
 nixos-rebuild switch --flake .#nixos-hermes \
   --target-host admin@nixos-hermes \
   --build-host  admin@nixos-hermes \
   --use-remote-sudo
 ```
 
-CI publishes the flake to FlakeHub on every push to `main`. Requires `FLAKEHUB_TOKEN`
-set as a GitHub Actions repository secret. There is no automated deploy; all applies are manual.
+CI publishes the flake to FlakeHub on every push to `main`. There is no automated deploy; all applies are manual.
+
 
 ---
 

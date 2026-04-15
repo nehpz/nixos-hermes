@@ -7,7 +7,7 @@
 
   boot.initrd.secrets = {
     "/etc/ssh/ssh_host_ed25519_key" = "/etc/ssh/ssh_host_ed25519_key";
-    # nixos-rebuild must run on this host; /etc/secrets/zfs.key only exists here.
+    # sops-nix decrypts zfs.key during activation; initrd-secrets bakes it in.
     "/etc/secrets/zfs.key" = "/etc/secrets/zfs.key";
   };
 
