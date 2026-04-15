@@ -120,23 +120,28 @@ nixos-hermes/
 > These steps are performed once from the NixOS live ISO. The host must be
 > reachable over SSH.
 
-### 1. Partition and Format the Drives
+### 1. Partition, Format, and Create the ZFS Pool
 
 ```bash
-nix run github:nix-community/disko -- \
+nix run github:nix-community/disko/latest -- \
   --mode disko hosts/hermes/disk-config.nix
 ```
 
-### 2. Generate and Place the ZFS Encryption Key
+Disko partitions both NVMes, formats the ESPs, and creates `rpool` as a mirror.
+It does **not** mount legacy-mountpoint ZFS datasets.
+
+### 2. Mount the ZFS Datasets
 
 ```bash
-mkdir -p /mnt/etc/secrets
-# Copy your pre-generated raw key:
-dd if=/dev/urandom of=/mnt/etc/secrets/zfs.key bs=32 count=1
-# Then import and load:
-zpool import -d /dev/disk/by-id rpool
-zfs load-key -L file:///mnt/etc/secrets/zfs.key rpool
+mount -t zfs rpool/root/nixos /mnt
+mkdir -p /mnt/{nix,var,var/lib/hermes,data/backup}
+mount -t zfs rpool/nix /mnt/nix
+mount -t zfs rpool/var /mnt/var
+mount -t zfs rpool/data/hermes /mnt/var/lib/hermes
+mount -t zfs rpool/data/backup /mnt/data/backup
 ```
+
+### 3. Place the Age Key
 
 ### 3. Place the Age Key
 
@@ -147,18 +152,28 @@ cp /path/to/age.key /mnt/etc/secrets/age.key
 chmod 600 /mnt/etc/secrets/age.key
 ```
 
-> **Note:** The SSH host key (`/etc/ssh/ssh_host_ed25519_key`) does not need
-> manual placement. sops-nix decrypts it from `hosts/hermes/secrets/ssh_host_ed25519_key.enc`
-> during `nixos-install` activation, using the age key placed in step 3.
+> **Note:** sops-nix is a systemd runtime service — it does not run during
+> `nixos-install` activation. The SSH host key and age key must both be
+> pre-placed manually (steps 3 and 4 below) before running `nixos-install`.
 
 
-### 4. Install the Flake
+### 4. Pre-Place the SSH Host Key
+
+```bash
+mkdir -p /mnt/etc/ssh
+SOPS_AGE_KEY_FILE=/etc/secrets/age.key nix run nixpkgs#sops -- \
+  --decrypt --output-type binary \
+  hosts/hermes/secrets/ssh_host_ed25519_key.enc > /mnt/etc/ssh/ssh_host_ed25519_key
+chmod 600 /mnt/etc/ssh/ssh_host_ed25519_key
+```
+
+### 5. Install the Flake
 
 ```bash
 nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes
 ```
 
-### 5. Reboot and Unlock
+### 6. Reboot and Verify
 
 ```bash
 reboot

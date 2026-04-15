@@ -188,8 +188,16 @@ cp /path/to/age.key /etc/secrets/age.key
 nix shell nixpkgs#git -c git clone https://github.com/nehpz/nixos-hermes /root/nixos-hermes
 cd /root/nixos-hermes
 
-# Partition, format, and mount everything
+# Partition, format ESPs, create zpool and datasets
 nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
+
+# Mount ZFS datasets (disko does not mount legacy-mountpoint datasets)
+mount -t zfs rpool/root/nixos /mnt
+mkdir -p /mnt/{nix,var,var/lib/hermes,data/backup}
+mount -t zfs rpool/nix /mnt/nix
+mount -t zfs rpool/var /mnt/var
+mount -t zfs rpool/data/hermes /mnt/var/lib/hermes
+mount -t zfs rpool/data/backup /mnt/data/backup
 
 # Copy the age key into the target system for sops-nix runtime secret management
 mkdir -p /mnt/etc/secrets && cp /etc/secrets/age.key /mnt/etc/secrets/age.key
@@ -198,15 +206,11 @@ mkdir -p /mnt/etc/secrets && cp /etc/secrets/age.key /mnt/etc/secrets/age.key
 # sops-nix is a runtime service and hasn't run yet at this point; without this
 # step the initrd gets an ephemeral key and the fingerprint changes every install.
 mkdir -p /mnt/etc/ssh
-SOPS_AGE_KEY_FILE=/etc/secrets/age.key \
-  nix run nixpkgs#sops -- --decrypt --output-type binary \
-  hosts/hermes/secrets/ssh_host_ed25519_key.enc > /mnt/etc/ssh/ssh_host_ed25519_key
+SOPS_AGE_KEY_FILE=/etc/secrets/age.key nix run nixpkgs#sops -- --decrypt --output-type binary hosts/hermes/secrets/ssh_host_ed25519_key.enc > /mnt/etc/ssh/ssh_host_ed25519_key
 chmod 600 /mnt/etc/ssh/ssh_host_ed25519_key
 
 # Install
-nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes \
-  --option extra-substituters https://install.determinate.systems \
-  --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
+nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://install.determinate.systems --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
 
 # Verify before rebooting — this directory must contain files
 ls /mnt/boot/nixos/
