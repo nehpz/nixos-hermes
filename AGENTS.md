@@ -187,8 +187,8 @@ mkdir -p /etc/secrets
 cp /path/to/age.key /etc/secrets/age.key
 
 # Clone the repo
-nix shell nixpkgs#git -c git clone https://github.com/nehpz/nixos-hermes /mnt/repo
-cd /mnt/repo
+nix shell nixpkgs#git -c git clone https://github.com/nehpz/nixos-hermes /root/nixos-hermes
+cd /root/nixos-hermes
 
 # Decrypt the ZFS key for disko pool creation
 nix run nixpkgs#sops -- --decrypt --output-type binary \
