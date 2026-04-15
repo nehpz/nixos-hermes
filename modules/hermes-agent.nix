@@ -19,13 +19,16 @@
     # Non-secret environment variables injected into the service.
     # PLAYWRIGHT_BROWSERS_PATH tells hermes's internal Playwright where NixOS
     # placed the browser binaries (standard PATH lookup does not work for Playwright).
+    # DISCORD_ALLOWED_USERS: user allowlisting is env-only; settings.discord has no
+    # equivalent key — placing it here keeps it out of the secret bundle.
     environment = {
       PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+      DISCORD_ALLOWED_USERS    = "185292472836947968";
     };
 
     # API keys merged into $HERMES_HOME/.env at activation.
     # Current keys: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN
-    # Non-secret Discord behaviour belongs in settings.discord below, not here.
+    # DISCORD_ALLOWED_USERS is in environment above (non-secret).
     environmentFiles = [ config.sops.secrets."hermes-env".path ];
 
     # Agent identity and user profile written to $HERMES_HOME on activation.
@@ -117,14 +120,17 @@
 
       # Discord operational behaviour — not secrets; live here, not in hermes-env.
       # DISCORD_BOT_TOKEN remains in the hermes-env sops secret.
+      # DISCORD_ALLOWED_USERS is wired via environment above (config.yaml has no allowed_users key).
       discord = {
         require_mention          = true;  # Respond only when @mentioned
         auto_thread              = true;  # Isolate each conversation in a thread
         reactions                = true;  # Emoji reactions for processing state
-        allowed_users            = [      # Restrict to specific user IDs; empty = all
-          "185292472836947968"
+        # allowed_users is NOT a valid config.yaml key — user allowlisting is
+        # env-only via DISCORD_ALLOWED_USERS (set in environment above).
+        allowed_channels         = [      # Restrict to specific channel IDs; empty = all
+          "1493930581090762833"           # hermes-yui (text)
+          "1493930714687869028"           # hermes-yui-voice (voice)
         ];
-        allowed_channels         = [];    # Restrict to specific channel IDs; empty = all
         free_response_channels   = [];    # Channels that respond without @mention
       };
 

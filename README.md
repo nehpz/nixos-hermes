@@ -198,4 +198,4 @@ secret: `FLAKEHUB_TOKEN` (set under Settings → Secrets and variables → Actio
 
 ## Design Decisions
 
-Architectural decisions are documented as ADRs in [`docs/`](docs/).
+Architectural decisions are documented as ADRs in [`docs/adr/`](docs/adr/).
