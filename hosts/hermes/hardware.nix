@@ -11,13 +11,6 @@
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  # Bake the sops-managed SSH host key into the initrd so the fingerprint is
-  # stable across rebuilds. On first install, pre-place the key at
-  # /mnt/etc/ssh/ssh_host_ed25519_key before running nixos-install.
-  boot.initrd.secrets = {
-    "/etc/ssh/ssh_host_ed25519_key" = "/etc/ssh/ssh_host_ed25519_key";
-  };
-
   boot.initrd.availableKernelModules = [
     "xhci_pci"
     "ahci"
@@ -54,7 +47,7 @@
   };
 
   fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/6A72-277A";
+    device = "/dev/disk/by-partlabel/disk-nvme0-ESP";
     fsType = "vfat";
     options = [
       "fmask=0022"
@@ -63,7 +56,7 @@
   };
 
   fileSystems."/boot-fallback" = {
-    device = "/dev/disk/by-uuid/6B49-FD17";
+    device = "/dev/disk/by-partlabel/disk-nvme1-ESP";
     fsType = "vfat";
     options = [
       "fmask=0022"

@@ -3,12 +3,14 @@
 {
   sops.defaultSopsFile = ./secrets/hermes-secrets.yaml;
   sops.age.keyFile = "/etc/secrets/age.key";
+  # The SSH host key is itself a sops-managed secret; using it as an age
+  # identity creates a circular dependency. Use only the age key file.
+  sops.age.sshKeyPaths = [ ];
 
   sops.secrets = {
 
     # Stable SSH host key — same fingerprint survives rebuilds.
-    # Pre-place at /mnt/etc/ssh/ssh_host_ed25519_key before nixos-install
-    # (see First Install procedure); sops-nix maintains it on subsequent rebuilds.
+    # sops-nix decrypts and places this at runtime; no pre-placement needed.
     ssh_host_ed25519_key = {
       sopsFile = ./secrets/ssh_host_ed25519_key.enc;
       format = "binary";

@@ -117,14 +117,12 @@ nixos-hermes/
 
 ## Bootstrapping the Host
 
-> These steps are performed once from the NixOS live ISO. The host must be
-> reachable over SSH.
+> Performed once from the NixOS live ISO.
 
 ### 1. Partition, Format, and Create the ZFS Pool
 
 ```bash
-nix run github:nix-community/disko/latest -- \
-  --mode disko hosts/hermes/disk-config.nix
+nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
 ```
 
 Disko partitions both NVMes, formats the ESPs, and creates `rpool` as a mirror.
@@ -145,43 +143,24 @@ mount -t zfs rpool/data/backup /mnt/data/backup
 
 ### 3. Place the Age Key
 
-### 3. Place the Age Key
-
 ```bash
 mkdir -p /mnt/etc/secrets
-# Copy the age private key generated with `age-keygen`:
 cp /path/to/age.key /mnt/etc/secrets/age.key
 chmod 600 /mnt/etc/secrets/age.key
 ```
 
-> **Note:** sops-nix is a systemd runtime service — it does not run during
-> `nixos-install` activation. The SSH host key and age key must both be
-> pre-placed manually (steps 3 and 4 below) before running `nixos-install`.
+sops-nix uses this key to decrypt all runtime secrets during and after install.
 
-
-### 4. Pre-Place the SSH Host Key
+### 4. Install
 
 ```bash
-mkdir -p /mnt/etc/ssh
-SOPS_AGE_KEY_FILE=/etc/secrets/age.key nix run nixpkgs#sops -- \
-  --decrypt --output-type binary \
-  hosts/hermes/secrets/ssh_host_ed25519_key.enc > /mnt/etc/ssh/ssh_host_ed25519_key
-chmod 600 /mnt/etc/ssh/ssh_host_ed25519_key
+nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://cache.flakehub.com --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
 ```
 
-### 5. Install the Flake
-
-```bash
-nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes
-```
-
-### 6. Reboot and Verify
+### 5. Reboot
 
 ```bash
 reboot
-# Once the initrd SSH server is up:
-ssh root@<host-ip>
-# Unlock runs automatically from .profile; system boots fully
 ```
 
 ---

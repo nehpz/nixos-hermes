@@ -175,12 +175,11 @@ nixos-rebuild dry-build --flake .#nixos-hermes
 
 ### First Install (Live CD)
 
-Place the age private key on the live environment first; it must end up at
-`/mnt/etc/secrets/age.key` so `sops-nix` can decrypt hermes-agent runtime
-secrets after install:
+Place the age private key on the live environment first — sops-nix needs it to
+decrypt all runtime secrets after install:
 
 ```bash
-# Place the age private key on the live system
+# Place the age private key
 mkdir -p /etc/secrets
 cp /path/to/age.key /etc/secrets/age.key
 
@@ -191,8 +190,8 @@ cd /root/nixos-hermes
 # Partition, format ESPs, create zpool and datasets
 nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
 
-# Mount ZFS datasets (disko does not mount legacy-mountpoint datasets).
-# The ZFS root must come first — all other mountpoints are subdirectories of it.
+# Mount ZFS datasets — disko does not mount legacy-mountpoint datasets.
+# ZFS root must come first; all other mountpoints are subdirectories of it.
 mount -t zfs rpool/root/nixos /mnt
 mkdir -p /mnt/boot /mnt/boot-fallback /mnt/nix /mnt/var/lib/hermes /mnt/data/backup
 mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
@@ -202,9 +201,9 @@ mount -t zfs rpool/var /mnt/var
 mount -t zfs rpool/data/hermes /mnt/var/lib/hermes
 mount -t zfs rpool/data/backup /mnt/data/backup
 
-# Verify all mounts are present before proceeding.
-# nixos-enter uses unshare --mount; any missing mount here will be missing inside the chroot.
-mount | grep /mnt
+# Pre-place the age key so sops-nix can decrypt secrets during activation
+mkdir -p /mnt/etc/secrets
+cp /etc/secrets/age.key /mnt/etc/secrets/age.key
 
 # Install
 nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://cache.flakehub.com --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
