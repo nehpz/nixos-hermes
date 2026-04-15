@@ -122,17 +122,15 @@
       # DISCORD_BOT_TOKEN remains in the hermes-env sops secret.
       # DISCORD_ALLOWED_USERS is wired via environment above (config.yaml has no allowed_users key).
       discord = {
-        require_mention          = true;    # Respond only when @mentioned
-        auto_thread              = true;    # Isolate each conversation in a thread
-        reactions                = true;    # Emoji reactions for processing state
-        allowed_channels         = [        # Restrict to specific channel IDs; empty = all
-          "1493930581090762833"             # hermes-yui (text)
-          "1493930714687869028"             # hermes-yui-voice (voice)
+        require_mention          = true;                    # Respond only when @mentioned
+        auto_thread              = true;                    # Isolate each conversation in a thread
+        reactions                = true;                    # Emoji reactions for processing state
+        allowed_channels         = [                        # Restrict to specific channel IDs; empty = all
+          "1493930581090762833"                             # hermes-yui (text)
+          "1493930714687869028"                             # hermes-yui-voice (voice)
         ];
-        free_response_channels   = [];      # Channels that respond without @mention
-        home_channel             = [        # hermes-home (text)
-          "1493934973009526884"
-        ];
+        free_response_channels   = [];                      # Channels that respond without @mention
+        home_channel             = "1493934973009526884";   # hermes-home (text)
       };
 
       # One session per user per channel — prevents session bleed in shared servers.
