@@ -24,7 +24,7 @@ nixos-hermes/
 ├── hosts/
 │   └── hermes/
 │       ├── default.nix                  # host entry: identity constants + imports
-│       ├── disk-config.nix              # disko layout (install-time, not imported)
+│       ├── disk-config.nix              # disko layout (imported; generates fileSystems.*)
 │       ├── hardware.nix                 # boot, initrd, filesystems, kernel, GPU
 │       ├── sops.nix                     # sops-nix secret bindings (host-specific)
 │       └── secrets/                     # committed SOPS-encrypted files
@@ -132,9 +132,18 @@ mounts, bootloader, and GPU packages.
 
 ### `hosts/hermes/disk-config.nix`
 
-Declarative disk layout consumed by disko at install time. Describes GPT
-partitions and the ZFS pool/dataset structure. After first install this file is
-reference documentation — changing it does not reformat disks.
+Declarative disk layout consumed by disko. Describes GPT partitions and the
+ZFS pool/dataset structure. Imported as a NixOS module via
+`disko.nixosModules.default`, so disko generates `fileSystems.*` entries at
+evaluation time from the `mountpoint = "..."` attributes on each partition
+and dataset. Do not declare `fileSystems.*` manually in `hardware.nix` — that
+would duplicate what disko produces.
+
+At install time the same file is also consumed by
+`nix run github:nix-community/disko/latest -- --mode disko` to partition and
+format. After first install, the partition/pool sections are effectively
+reference documentation — changing them does not reformat disks — but the
+`mountpoint` attributes remain live: they control mounting on every rebuild.
 
 ### `hosts/hermes/sops.nix`
 
@@ -179,42 +188,60 @@ Place the age private key on the live environment first — sops-nix needs it to
 decrypt all runtime secrets after install:
 
 ```bash
-# Place the age private key
+# 1. Place the age private key on the live environment.
 mkdir -p /etc/secrets
 cp /path/to/age.key /etc/secrets/age.key
 
-# Clone the repo
+# 2. Clone the repo.
 nix shell nixpkgs#git -c git clone https://github.com/nehpz/nixos-hermes /root/nixos-hermes
 cd /root/nixos-hermes
 
-# Partition, format ESPs, create zpool and datasets
+# 3. Partition, format, and mount every filesystem under /mnt in one shot.
+# disko reads disk-config.nix, destroys existing layouts on the target disks,
+# creates GPT + ESPs + zpool + datasets, and mounts everything at /mnt
+# according to the mountpoint attributes.
 nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
 
-# Mount ZFS datasets — disko does not mount legacy-mountpoint datasets.
-# ZFS root must come first; all other mountpoints are subdirectories of it.
-mount -t zfs rpool/root/nixos /mnt
-mkdir -p /mnt/boot /mnt/boot-fallback /mnt/nix /mnt/var/lib/hermes /mnt/data/backup
-mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
-mount /dev/disk/by-partlabel/disk-nvme1-ESP /mnt/boot-fallback
-mount -t zfs rpool/nix /mnt/nix
-mount -t zfs rpool/var /mnt/var
-mount -t zfs rpool/data/hermes /mnt/var/lib/hermes
-mount -t zfs rpool/data/backup /mnt/data/backup
-
-# Pre-place the age key so sops-nix can decrypt secrets during activation
+# 4. Pre-place the age key inside the target root so sops-nix can decrypt
+# secrets during first activation.
 mkdir -p /mnt/etc/secrets
 cp /etc/secrets/age.key /mnt/etc/secrets/age.key
 
-# Install
-nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://cache.flakehub.com --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
+# 5. Install. Everything else (hostname, users, services, bootloader) is
+# declarative.
+nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes \
+  --option extra-substituters https://cache.flakehub.com \
+  --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
 
-# Verify before rebooting — this directory must contain files
+# 6. Sanity-check that the bootloader was written to the ESP.
 ls /mnt/boot/nixos/
 ```
 
 The `extra-substituters` flags are only required for the initial install. Once
 Determinate Nix v3.6.0 or later is running on the host, subsequent `nixos-rebuild`
 runs need no extra options.
+
+**If `nixos-install` fails at the bootloader step** with an empty or missing
+`/boot`, apply the manual bootloader install below. This has historically been
+needed on this host because NixOS activation can remove the `/boot` mountpoint
+from the ZFS root before `bootctl install` runs. Option 2 (disko as a NixOS
+module) may have fixed the root cause; test a clean install before assuming the
+workaround is still required.
+
+```bash
+# Re-mount the ESP and enter a chroot that bypasses nixos-enter's activation.
+mkdir -p /mnt/boot
+mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
+mount --bind /proc /mnt/proc
+mount --bind /dev  /mnt/dev
+mount --bind /sys  /mnt/sys
+mount -t tmpfs none /mnt/run
+
+NIXOS_INSTALL_BOOTLOADER=1 \
+  chroot /mnt /nix/var/nix/profiles/system/bin/switch-to-configuration boot
+
+ls /mnt/boot/nixos/    # must contain files
+```
 
 ### Apply to Host
 
