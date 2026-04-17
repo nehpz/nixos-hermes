@@ -48,4 +48,8 @@
   };
   swapDevices = [ ];
   powerManagement.cpuFreqGovernor = "schedutil";
+
+  # ZFS maintenance — host-specific because it only applies to ZFS hosts.
+  services.zfs.autoScrub.enable = true;
+  services.zfs.trim.enable = true;
 }

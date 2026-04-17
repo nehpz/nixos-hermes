@@ -71,10 +71,13 @@
           autotrim = "on";
         };
         rootFsOptions = {
+          # ZFS property: don't auto-mount the pool root dataset at /rpool.
+          # Distinct from the disko-level `mountpoint = "none"` above, which
+          # controls disko's fileSystems generation.
+          mountpoint = "none";
           acltype = "posixacl";
           xattr = "sa";
           compression = "lz4";
-          "com.sun:auto-snapshot" = "false";
         };
         datasets = {
           "root/nixos" = {
@@ -82,6 +85,10 @@
             mountpoint = "/";
             options = {
               mountpoint = "legacy";
+              # Ephemeral NixOS system dataset — disable auto-snapshot here
+              # only, leaving data datasets untouched so future snapshot
+              # tooling can opt them in explicitly.
+              "com.sun:auto-snapshot" = "false";
             };
           };
           "nix" = {

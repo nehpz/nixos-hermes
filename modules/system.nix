@@ -12,8 +12,6 @@
   services.thermald.enable = true;
   services.printing.enable = true;
   services.xserver.videoDrivers = [ "modesetting" ];
-  services.zfs.autoScrub.enable = true;
-  services.zfs.trim.enable = true;
 
   services.openssh.enable = true;
   services.openssh.hostKeys = [
@@ -32,7 +30,6 @@
     man
     htop
     iotop
-    zfs
   ];
 
   environment.sessionVariables = {
