@@ -106,6 +106,23 @@ nixos-hermes/
 Two supported paths. Prefer **nixos-anywhere** for a headless remote install;
 fall back to the **Live CD** flow only when SSH to the target is unavailable.
 
+### Prerequisites
+
+The target must be reachable over SSH as `root` (or a passwordless-sudo user)
+from your workstation, running any modern Linux kernel. Prep depends on the
+target's starting state:
+
+- **Already running Linux (any distro):** confirm `sshd` is up, your key is in
+  `~/.ssh/authorized_keys`, and the machine has outbound internet. Nothing else
+  to install — nixos-anywhere will kexec over it.
+- **Bare-metal, no OS (e.g. a fresh hermes host):** boot the NixOS minimal
+  installer ISO from USB, set a root password with `passwd`, note the IP with
+  `ip -4 addr`, and `ssh-copy-id root@<target-ip>` from your workstation.
+  Console access is needed once; afterwards the install proceeds over SSH.
+- **Has IPMI/BMC with remote media:** mount a Linux rescue ISO via the BMC
+  web UI and authorize your key through its console (not applicable to the
+  hermes host, which has no BMC).
+
 From your workstation, with an age private key available locally:
 
 ```bash

@@ -204,20 +204,85 @@ only when SSH to the target is not available (no IPMI, no rescue OS).
 
 #### Path A: nixos-anywhere (recommended, headless)
 
-Requirements on the target: any Linux kernel reachable over SSH as `root` or
-as a user with passwordless `sudo`. Options in order of convenience:
+##### What nixos-anywhere needs
 
-1. A Linux rescue image booted via IPMI/iDRAC/BMC with SSH.
-2. An existing Linux install (Ubuntu, Debian, etc.) — nixos-anywhere will
-   kexec over it.
-3. A NixOS installer ISO with an authorized SSH key baked in.
+Exactly one thing: SSH access to the target as `root` (or as a user with
+passwordless `sudo`), running any reasonably current Linux kernel. From there
+it kexecs into a NixOS installer, partitions via `disk-config.nix`, installs
+the flake, and reboots — without you touching the physical machine again.
 
 The age private key is seeded onto the target during install via
 `--extra-files`, so sops-nix can decrypt secrets on first activation.
 
-Options 1 and 2 are kexec'd by `nixos-anywhere` into a NixOS installer before
-disko + install run; option 3 is already a NixOS installer, so no kexec step
-occurs.
+##### Getting the target to an SSH-reachable Linux state
+
+The prep required depends on the target's starting state.
+
+**State 1 — target is already running a Linux distro (Ubuntu, Debian, Fedora,
+etc.).**
+
+This is the easiest path; nothing to install. Just confirm:
+
+- `sshd` is running and reachable from your workstation.
+- Your workstation's public key is in `~/.ssh/authorized_keys` for either
+  `root` or a user with passwordless `sudo`.
+- The machine has outbound internet (nixos-anywhere fetches nixpkgs during
+  install).
+
+nixos-anywhere will kexec over the existing distro and wipe the disks per
+`disk-config.nix`, so there is nothing on the current install worth
+preserving.
+
+**State 2 — target is bare-metal with no OS, and you have console access.**
+
+The hermes host (HP Elite Mini 800 G9) has no IPMI/BMC, so this is the
+realistic starting state for reprovisions. One-time console access is enough;
+after the installer is up and SSH is reachable, the rest is headless.
+
+Workflow:
+
+1. On your workstation, download the minimal NixOS installer ISO:
+   https://nixos.org/download/#nixos-iso
+2. Write it to a USB stick (e.g. `dd if=nixos-minimal-*.iso of=/dev/diskN bs=4M`,
+   or use Etcher / Rufus).
+3. Plug USB + monitor + keyboard into the target; boot from USB.
+4. At the installer prompt, set a temporary root password:
+   ```bash
+   sudo passwd root
+   ```
+5. Confirm `sshd` is running (it is, on the minimal ISO) and find the target's
+   IP:
+   ```bash
+   ip -4 addr show | grep inet
+   ```
+6. From your workstation, copy your key in once (using the password from step
+   4); after this, unplug monitor + keyboard and finish headlessly:
+   ```bash
+   ssh-copy-id root@<target-ip>
+   ```
+
+Alternatively, build a custom NixOS installer ISO with your SSH key baked in
+(`nixos-generators -f iso ...`). For a one-off reprovision, `ssh-copy-id` is
+faster.
+
+**State 3 — target has IPMI/iDRAC/BMC with remote media.**
+
+Not applicable to the hermes host. For other deployments: mount a Linux rescue
+ISO (SystemRescue, Ubuntu Live, or the NixOS minimal installer) via the BMC
+web UI, then authorize your SSH key as in state 2 (but over the BMC console,
+no physical access required).
+
+##### Workstation prerequisites
+
+On the machine running `nix run .#nixos-anywhere`:
+
+- A clone of this repo with the flake `flake.lock` committed.
+- The age private key for this host available at some local path.
+- An SSH agent or key that authenticates against whatever you set up on the
+  target above.
+- Outbound SSH to the target on port 22 (nixos-anywhere uses SSH only).
+
+##### Run the install
 
 Run from your workstation checkout of this repo:
 
