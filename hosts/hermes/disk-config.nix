@@ -65,15 +65,15 @@
       rpool = {
         type = "zpool";
         mode = "mirror";
-        mountpoint = "none";
         options = {
           ashift = "12";
           autotrim = "on";
         };
         rootFsOptions = {
-          # ZFS property: don't auto-mount the pool root dataset at /rpool.
-          # Distinct from the disko-level `mountpoint = "none"` above, which
-          # controls disko's fileSystems generation.
+          # ZFS property on the pool root dataset: do not mount it anywhere.
+          # This is the only place "none" belongs; disko's zpool-level
+          # `mountpoint` attribute expects an absolute path or null and would
+          # reject the literal string "none".
           mountpoint = "none";
           acltype = "posixacl";
           xattr = "sa";
