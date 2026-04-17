@@ -134,6 +134,27 @@
         "type": "github"
       }
     },
+    "flake-parts_3": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "nixos-anywhere",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1768135262,
+        "narHash": "sha256-PVvu7OqHBGWN16zSi6tEmPwwHQ4rLPU9Plvs8/1TUBY=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "80daad04eddbbf5a4d883996a73f3f542fa437ac",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
     "git-hooks-nix": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -203,6 +224,97 @@
       "original": {
         "type": "tarball",
         "url": "https://flakehub.com/f/DeterminateSystems/nix-src/%2A"
+      }
+    },
+    "nix-vm-test": {
+      "inputs": {
+        "nixpkgs": [
+          "nixos-anywhere",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1769079217,
+        "narHash": "sha256-R6qzhu+YJolxE2vUsPQWWwUKMbAG5nXX3pBtg8BNX38=",
+        "owner": "Enzime",
+        "repo": "nix-vm-test",
+        "rev": "58c15f78947b431d6c206e0966500c7e9139bd2f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Enzime",
+        "ref": "pr-105-latest",
+        "repo": "nix-vm-test",
+        "type": "github"
+      }
+    },
+    "nixos-anywhere": {
+      "inputs": {
+        "disko": [
+          "disko"
+        ],
+        "flake-parts": "flake-parts_3",
+        "nix-vm-test": "nix-vm-test",
+        "nixos-images": "nixos-images",
+        "nixos-stable": "nixos-stable",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "treefmt-nix": "treefmt-nix"
+      },
+      "locked": {
+        "lastModified": 1769956140,
+        "narHash": "sha256-D+RQ+DaIC/GVwv5lUs7e8jSmh8aPc77Kg/gRjaS25Zk=",
+        "owner": "nix-community",
+        "repo": "nixos-anywhere",
+        "rev": "92f82c5196a5f8588be4967e535c4cfd35e85902",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixos-anywhere",
+        "type": "github"
+      }
+    },
+    "nixos-images": {
+      "inputs": {
+        "nixos-stable": [
+          "nixos-anywhere",
+          "nixos-stable"
+        ],
+        "nixos-unstable": [
+          "nixos-anywhere",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1766770015,
+        "narHash": "sha256-kUmVBU+uBUPl/v3biPiWrk680b8N9rRMhtY97wsxiJc=",
+        "owner": "nix-community",
+        "repo": "nixos-images",
+        "rev": "e4dba54ddb6b2ad9c6550e5baaed2fa27938a5d2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixos-images",
+        "type": "github"
+      }
+    },
+    "nixos-stable": {
+      "locked": {
+        "lastModified": 1769598131,
+        "narHash": "sha256-e7VO/kGLgRMbWtpBqdWl0uFg8Y2XWFMdz0uUJvlML8o=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "fa83fd837f3098e3e678e6cf017b2b36102c7211",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-25.11",
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "nixpkgs": {
@@ -388,6 +500,7 @@
         "determinate": "determinate",
         "disko": "disko",
         "hermes-agent": "hermes-agent",
+        "nixos-anywhere": "nixos-anywhere",
         "nixpkgs": "nixpkgs_3",
         "sops-nix": "sops-nix"
       }
@@ -407,6 +520,27 @@
       "original": {
         "type": "tarball",
         "url": "https://flakehub.com/f/Mic92/sops-nix/0.1.1200"
+      }
+    },
+    "treefmt-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixos-anywhere",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1769691507,
+        "narHash": "sha256-8aAYwyVzSSwIhP2glDhw/G0i5+wOrren3v6WmxkVonM=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "28b19c5844cc6e2257801d43f2772a4b4c050a1b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "type": "github"
       }
     },
     "uv2nix": {

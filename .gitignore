@@ -28,6 +28,7 @@
 .env.test.local
 .env.production.local
 .secrets/
+extra-files/
 
 #
 
