@@ -14,6 +14,10 @@
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot";
+                mountOptions = [
+                  "fmask=0022"
+                  "dmask=0022"
+                ];
               };
             };
             zfs = {
@@ -39,6 +43,11 @@
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot-fallback";
+                mountOptions = [
+                  "fmask=0022"
+                  "dmask=0022"
+                  "nofail"
+                ];
               };
             };
             zfs = {
@@ -56,25 +65,28 @@
       rpool = {
         type = "zpool";
         mode = "mirror";
+        mountpoint = "none";
         options = {
           ashift = "12";
           autotrim = "on";
         };
         rootFsOptions = {
-          mountpoint = "none";
           acltype = "posixacl";
           xattr = "sa";
           compression = "lz4";
+          "com.sun:auto-snapshot" = "false";
         };
         datasets = {
           "root/nixos" = {
             type = "zfs_fs";
+            mountpoint = "/";
             options = {
               mountpoint = "legacy";
             };
           };
           "nix" = {
             type = "zfs_fs";
+            mountpoint = "/nix";
             options = {
               mountpoint = "legacy";
               compression = "zstd";
@@ -82,6 +94,7 @@
           };
           "var" = {
             type = "zfs_fs";
+            mountpoint = "/var";
             options = {
               mountpoint = "legacy";
             };
@@ -94,6 +107,7 @@
           };
           "data/hermes" = {
             type = "zfs_fs";
+            mountpoint = "/var/lib/hermes";
             options = {
               mountpoint = "legacy";
               recordsize = "16K";
@@ -101,6 +115,7 @@
           };
           "data/backup" = {
             type = "zfs_fs";
+            mountpoint = "/data/backup";
             options = {
               mountpoint = "legacy";
               compression = "zstd";

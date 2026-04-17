@@ -22,70 +22,20 @@
     "sr_mod"
   ];
   boot.initrd.kernelModules = [ ];
-
   boot.kernelModules = [ "kvm-intel" ];
-  boot.extraModulePackages = [ ];
-
   boot.kernelParams = [
     "zfs.zfs_arc_max=17179869184"
     "nvme_core.default_ps_max_latency_us=0"
   ];
-
   boot.kernel.sysctl = {
     "vm.swappiness" = 0;
   };
-
+  boot.extraModulePackages = [ ];
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.enable = true;
   boot.loader.systemd-boot.extraInstallCommands = ''
     ${pkgs.rsync}/bin/rsync -av --delete /boot/ /boot-fallback/
   '';
-
-  fileSystems."/" = {
-    device = "rpool/root/nixos";
-    fsType = "zfs";
-  };
-
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-partlabel/disk-nvme0-ESP";
-    fsType = "vfat";
-    options = [
-      "fmask=0022"
-      "dmask=0022"
-    ];
-  };
-
-  fileSystems."/boot-fallback" = {
-    device = "/dev/disk/by-partlabel/disk-nvme1-ESP";
-    fsType = "vfat";
-    options = [
-      "fmask=0022"
-      "dmask=0022"
-      "nofail"
-    ];
-  };
-
-  fileSystems."/nix" = {
-    device = "rpool/nix";
-    fsType = "zfs";
-  };
-
-  fileSystems."/var" = {
-    device = "rpool/var";
-    fsType = "zfs";
-  };
-
-  fileSystems."/var/lib/hermes" = {
-    device = "rpool/data/hermes";
-    fsType = "zfs";
-  };
-
-  fileSystems."/data/backup" = {
-    device = "rpool/data/backup";
-    fsType = "zfs";
-  };
-
-  swapDevices = [ ];
 
   hardware.enableRedistributableFirmware = true;
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
