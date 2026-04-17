@@ -118,6 +118,7 @@ nix run .#nixos-anywhere -- \
   --extra-files extra-files \
   root@<target>
 
+find extra-files -type f -exec shred -u {} +
 rm -rf extra-files
 ```
 

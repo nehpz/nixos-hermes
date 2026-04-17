@@ -117,9 +117,14 @@ it. Duplicate declarations will cause an evaluation error.
 **Flake inputs use FlakeHub URLs where possible.** `NixOS/nixpkgs/0` is FlakeHub's
 semver alias for nixpkgs unstable (`0` = pre-1.0 channel). FlakeHub Cache works
 best when inputs are FlakeHub-sourced; do not switch a FlakeHub-published input
-back to a raw GitHub URL. Two inputs are exceptions because upstream does not
-publish to FlakeHub: `hermes-agent` (NousResearch) and `nixos-anywhere`
-(nix-community). Both use `github:` URLs and are still pinned via `flake.lock`.
+back to a raw GitHub URL. Two inputs are exceptions:
+
+- `hermes-agent` (NousResearch) is not published to FlakeHub at all.
+- `nixos-anywhere` (nix-community) has a FlakeHub landing page but no
+  releases are currently consumable as a flake input (`https://flakehub.com/f/nix-community/nixos-anywhere/*`
+  returns 404 on archive fetch); revisit when upstream publishes a version.
+
+Both use `github:` URLs and are still pinned via `flake.lock`.
 
 ### `hosts/hermes/default.nix`
 
@@ -210,6 +215,10 @@ as a user with passwordless `sudo`. Options in order of convenience:
 The age private key is seeded onto the target during install via
 `--extra-files`, so sops-nix can decrypt secrets on first activation.
 
+Options 1 and 2 are kexec'd by `nixos-anywhere` into a NixOS installer before
+disko + install run; option 3 is already a NixOS installer, so no kexec step
+occurs.
+
 Run from your workstation checkout of this repo:
 
 ```bash
@@ -219,15 +228,17 @@ mkdir -p extra-files/etc/secrets
 cp /path/to/age.key extra-files/etc/secrets/age.key
 chmod 400 extra-files/etc/secrets/age.key
 
-# 2. Kexec the target into the NixOS installer, run disko from
-#    hosts/hermes/disk-config.nix, install, and reboot.
+# 2. Kexec the target (if not already NixOS) into the NixOS installer, run
+#    disko from hosts/hermes/disk-config.nix, install, and reboot.
 nix run .#nixos-anywhere -- \
   --flake .#nixos-hermes \
   --extra-files extra-files \
   root@<target-ip-or-host>
 
-# 3. Clean up the plaintext age key staging dir. extra-files/ is gitignored
-#    but keep it off disk when not actively bootstrapping.
+# 3. Securely wipe and remove the plaintext age key staging dir. Plain `rm`
+#    leaves the key recoverable on many filesystems; shred overwrites first.
+#    extra-files/ is gitignored but must not linger as recoverable plaintext.
+find extra-files -type f -exec shred -u {} +
 rm -rf extra-files
 ```
 
