@@ -25,8 +25,7 @@ multiple agents concurrently as capabilities grow.
 
 ### Storage
 
-ZFS mirror pool (`rpool`) spanning both NVMe drives, encrypted with a raw key
-stored at `/etc/secrets/zfs.key`. Dataset layout:
+ZFS mirror pool (`rpool`) spanning both NVMe drives. Dataset layout:
 
 ```text
 rpool
@@ -44,22 +43,9 @@ replicates the primary ESP to the fallback via `rsync`.
 
 ZFS ARC is capped at 16GB to leave headroom for the agent workload.
 
-### Remote Unlock
-
-The pool is encrypted. On each cold boot, the initrd brings up the NIC and
-exposes an SSH server (port 22, same ed25519 host key as the main system).
-
-Unlock procedure:
-
-```bash
-# initrd has no DNS resolver — use the host IP, not the hostname
-ssh root@<host-ip>
-# the shell auto-runs:  zfs load-key -a; killall zfs
-# system continues booting
-```
-
-After unlocking, the main system comes up and `nixos-hermes` resolves normally
-via your local DNS for all subsequent access.
+Disk layout, partitioning, and the generated `fileSystems.*` entries are all
+driven from `hosts/hermes/disk-config.nix` via the
+[disko](https://github.com/nix-community/disko) NixOS module.
 
 ### Secrets Management
 
@@ -103,9 +89,9 @@ nixos-hermes/
 ├── hosts/
 │   └── hermes/
 │       ├── default.nix                # host entry: identity constants + imports
-│       ├── hardware.nix               # boot, initrd, filesystems, kernel, GPU
+│       ├── disk-config.nix            # disko layout (imported; generates fileSystems.*)
+│       ├── hardware.nix               # boot, initrd, kernel, GPU, ZFS services
 │       ├── sops.nix                   # SOPS secret bindings
-│       ├── disk-config.nix            # disko layout (install-time only)
 │       └── secrets/                   # encrypted secret files (committed)
 └── modules/
     ├── system.nix                     # locale, tz, networking, packages, sudo
@@ -117,51 +103,31 @@ nixos-hermes/
 
 ## Bootstrapping the Host
 
-> Performed once from the NixOS live ISO.
+Two supported paths. Prefer **nixos-anywhere** for a headless remote install;
+fall back to the **Live CD** flow only when SSH to the target is unavailable.
 
-### 1. Partition, Format, and Create the ZFS Pool
-
-```bash
-nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
-```
-
-Disko partitions both NVMes, formats the ESPs, and creates `rpool` as a mirror.
-It does **not** mount legacy-mountpoint ZFS datasets.
-
-### 2. Mount the ZFS Datasets
+From your workstation, with an age private key available locally:
 
 ```bash
-mount -t zfs rpool/root/nixos /mnt
-mkdir -p /mnt/boot /mnt/boot-fallback /mnt/nix /mnt/var/lib/hermes /mnt/data/backup
-mount /dev/disk/by-partlabel/disk-nvme0-ESP /mnt/boot
-mount /dev/disk/by-partlabel/disk-nvme1-ESP /mnt/boot-fallback
-mount -t zfs rpool/nix /mnt/nix
-mount -t zfs rpool/var /mnt/var
-mount -t zfs rpool/data/hermes /mnt/var/lib/hermes
-mount -t zfs rpool/data/backup /mnt/data/backup
+mkdir -p extra-files/etc/secrets
+cp /path/to/age.key extra-files/etc/secrets/age.key
+chmod 400 extra-files/etc/secrets/age.key
+
+nix run .#nixos-anywhere -- \
+  --flake .#nixos-hermes \
+  --extra-files extra-files \
+  root@<target>
+
+rm -rf extra-files
 ```
 
-### 3. Place the Age Key
+This kexec's the target into the NixOS installer, runs disko from
+`hosts/hermes/disk-config.nix` to partition and mount, installs, and reboots.
+The age key is seeded into `/etc/secrets/age.key` on the installed system so
+sops-nix can decrypt secrets on first activation.
 
-```bash
-mkdir -p /mnt/etc/secrets
-cp /path/to/age.key /mnt/etc/secrets/age.key
-chmod 600 /mnt/etc/secrets/age.key
-```
-
-sops-nix uses this key to decrypt all runtime secrets during and after install.
-
-### 4. Install
-
-```bash
-nixos-install --flake github:nehpz/nixos-hermes#nixos-hermes --option extra-substituters https://cache.flakehub.com --option extra-trusted-public-keys 'cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM='
-```
-
-### 5. Reboot
-
-```bash
-reboot
-```
+Full install instructions, including the Live CD fallback and the bootloader
+workaround, live in [`AGENTS.md`](AGENTS.md#first-install).
 
 ---
 

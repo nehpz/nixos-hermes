@@ -114,10 +114,12 @@ entries in the `modules` list regardless of where they came from.
 `nix.package` elsewhere in the module tree — the Determinate module manages
 it. Duplicate declarations will cause an evaluation error.
 
-**All flake inputs use FlakeHub URLs.** `NixOS/nixpkgs/0` is FlakeHub's semver
-alias for nixpkgs unstable (`0` = pre-1.0 channel). Do not switch individual
-inputs back to raw GitHub URLs — FlakeHub Cache works best when all inputs are
-FlakeHub-sourced.
+**Flake inputs use FlakeHub URLs where possible.** `NixOS/nixpkgs/0` is FlakeHub's
+semver alias for nixpkgs unstable (`0` = pre-1.0 channel). FlakeHub Cache works
+best when inputs are FlakeHub-sourced; do not switch a FlakeHub-published input
+back to a raw GitHub URL. Two inputs are exceptions because upstream does not
+publish to FlakeHub: `hermes-agent` (NousResearch) and `nixos-anywhere`
+(nix-community). Both use `github:` URLs and are still pinned via `flake.lock`.
 
 ### `hosts/hermes/default.nix`
 
@@ -127,8 +129,8 @@ These constants must never be extracted into shared modules.
 
 ### `hosts/hermes/hardware.nix`
 
-Everything tied to physical hardware: initrd modules, kernel params, filesystem
-mounts, bootloader, and GPU packages.
+Everything tied to physical hardware: boot, initrd, kernel, GPU, and bootloader
+configuration.
 
 Host-specific storage service options (e.g. `services.zfs.autoScrub`,
 `services.zfs.trim`) also live here because they only apply to this host's
@@ -145,9 +147,10 @@ evaluation time from the `mountpoint = "..."` attributes on each partition
 and dataset. Do not declare `fileSystems.*` manually in `hardware.nix` — that
 would duplicate what disko produces.
 
-At install time the same file is also consumed by
-`nix run github:nix-community/disko/latest -- --mode disko` to partition and
-format. After first install, the partition/pool sections are effectively
+At install time the same file is also consumed by `nix run .#disko -- --mode
+disko hosts/hermes/disk-config.nix` — exposed as a flake app so the CLI uses
+the same `flake.lock` pin as the NixOS module, eliminating module/CLI version
+skew. After first install, the partition/pool sections are effectively
 reference documentation — changing them does not reformat disks — but the
 `mountpoint` attributes remain live: they control mounting on every rebuild.
 
@@ -188,10 +191,53 @@ nix flake check
 nixos-rebuild dry-build --flake .#nixos-hermes
 ```
 
-### First Install (Live CD)
+### First Install
 
-Place the age private key on the live environment first — sops-nix needs it to
-decrypt all runtime secrets after install:
+Two paths are supported. **Prefer nixos-anywhere** for a headless host: you
+never need to touch a keyboard on the target. Fall back to the Live CD flow
+only when SSH to the target is not available (no IPMI, no rescue OS).
+
+#### Path A: nixos-anywhere (recommended, headless)
+
+Requirements on the target: any Linux kernel reachable over SSH as `root` or
+as a user with passwordless `sudo`. Options in order of convenience:
+
+1. A Linux rescue image booted via IPMI/iDRAC/BMC with SSH.
+2. An existing Linux install (Ubuntu, Debian, etc.) — nixos-anywhere will
+   kexec over it.
+3. A NixOS installer ISO with an authorized SSH key baked in.
+
+The age private key is seeded onto the target during install via
+`--extra-files`, so sops-nix can decrypt secrets on first activation.
+
+Run from your workstation checkout of this repo:
+
+```bash
+# 1. Stage the age key at the exact layout it must land in on the target.
+#    Everything under extra-files/ is rsync'd to / on the installed system.
+mkdir -p extra-files/etc/secrets
+cp /path/to/age.key extra-files/etc/secrets/age.key
+chmod 400 extra-files/etc/secrets/age.key
+
+# 2. Kexec the target into the NixOS installer, run disko from
+#    hosts/hermes/disk-config.nix, install, and reboot.
+nix run .#nixos-anywhere -- \
+  --flake .#nixos-hermes \
+  --extra-files extra-files \
+  root@<target-ip-or-host>
+
+# 3. Clean up the plaintext age key staging dir. extra-files/ is gitignored
+#    but keep it off disk when not actively bootstrapping.
+rm -rf extra-files
+```
+
+After the first successful install, subsequent changes use the normal `Apply
+to Host` flow below — nixos-anywhere is only for bootstrapping or re-imaging.
+
+#### Path B: Live CD / manual nixos-install (fallback)
+
+Use this only when you cannot SSH into the target before install. Boot the
+NixOS installer ISO on the target and run:
 
 ```bash
 # 1. Place the age private key on the live environment.
@@ -205,8 +251,9 @@ cd /root/nixos-hermes
 # 3. Partition, format, and mount every filesystem under /mnt in one shot.
 # disko reads disk-config.nix, destroys existing layouts on the target disks,
 # creates GPT + ESPs + zpool + datasets, and mounts everything at /mnt
-# according to the mountpoint attributes.
-nix run github:nix-community/disko/latest -- --mode disko hosts/hermes/disk-config.nix
+# according to the mountpoint attributes. `.#disko` uses the lockfile-pinned
+# disko, matching the version the NixOS module was evaluated against.
+nix run .#disko -- --mode disko hosts/hermes/disk-config.nix
 
 # 4. Pre-place the age key inside the target root so sops-nix can decrypt
 # secrets during first activation.
@@ -431,7 +478,6 @@ GitHub (nehpz/nixos-hermes)
     └─ manual: nixos-rebuild switch → nixos-hermes
                                            │
                                     ZFS mirror rpool
-                                    (remote unlock via initrd SSH)
 ```
 
 The host IP is static and enforced at the gateway. If it changes, update your
