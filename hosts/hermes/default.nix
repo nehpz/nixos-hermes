@@ -3,6 +3,7 @@
 {
   imports = [
     ./hardware.nix
+    ./disk-config.nix
     ./sops.nix
     ../../modules/system.nix
     ../../modules/hermes-agent.nix

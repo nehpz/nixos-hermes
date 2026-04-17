@@ -57,6 +57,25 @@
         "url": "https://install.determinate.systems/determinate-nixd/tag/v3.17.3/x86_64-linux"
       }
     },
+    "disko": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1768916804,
+        "narHash": "sha256-mdQZYN8bOK5T4/i1d0HXcBp1id2h8a1YxlH0MeDMXVg=",
+        "rev": "6d224fe8309f5855cafbd418f48c55b18eec2da1",
+        "revCount": 1311,
+        "type": "tarball",
+        "url": "https://api.flakehub.com/f/pinned/nix-community/disko/1.13.0/019bdba9-f1ea-7693-afdb-10e0e857365a/source.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://flakehub.com/f/nix-community/disko/%2A"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -367,6 +386,7 @@
     "root": {
       "inputs": {
         "determinate": "determinate",
+        "disko": "disko",
         "hermes-agent": "hermes-agent",
         "nixpkgs": "nixpkgs_3",
         "sops-nix": "sops-nix"

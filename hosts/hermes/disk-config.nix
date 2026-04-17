@@ -14,6 +14,10 @@
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot";
+                mountOptions = [
+                  "fmask=0022"
+                  "dmask=0022"
+                ];
               };
             };
             zfs = {
@@ -39,6 +43,11 @@
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot-fallback";
+                mountOptions = [
+                  "fmask=0022"
+                  "dmask=0022"
+                  "nofail"
+                ];
               };
             };
             zfs = {
@@ -56,11 +65,15 @@
       rpool = {
         type = "zpool";
         mode = "mirror";
+        mountpoint = "none";
         options = {
           ashift = "12";
           autotrim = "on";
         };
         rootFsOptions = {
+          # ZFS property: don't auto-mount the pool root dataset at /rpool.
+          # Distinct from the disko-level `mountpoint = "none"` above, which
+          # controls disko's fileSystems generation.
           mountpoint = "none";
           acltype = "posixacl";
           xattr = "sa";
@@ -69,12 +82,18 @@
         datasets = {
           "root/nixos" = {
             type = "zfs_fs";
+            mountpoint = "/";
             options = {
               mountpoint = "legacy";
+              # Ephemeral NixOS system dataset — disable auto-snapshot here
+              # only, leaving data datasets untouched so future snapshot
+              # tooling can opt them in explicitly.
+              "com.sun:auto-snapshot" = "false";
             };
           };
           "nix" = {
             type = "zfs_fs";
+            mountpoint = "/nix";
             options = {
               mountpoint = "legacy";
               compression = "zstd";
@@ -82,6 +101,7 @@
           };
           "var" = {
             type = "zfs_fs";
+            mountpoint = "/var";
             options = {
               mountpoint = "legacy";
             };
@@ -94,6 +114,7 @@
           };
           "data/hermes" = {
             type = "zfs_fs";
+            mountpoint = "/var/lib/hermes";
             options = {
               mountpoint = "legacy";
               recordsize = "16K";
@@ -101,6 +122,7 @@
           };
           "data/backup" = {
             type = "zfs_fs";
+            mountpoint = "/data/backup";
             options = {
               mountpoint = "legacy";
               compression = "zstd";

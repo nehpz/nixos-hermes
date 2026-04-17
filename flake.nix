@@ -5,6 +5,8 @@
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0";
     sops-nix.url = "https://flakehub.com/f/Mic92/sops-nix/0.1.1200";
+    disko.url = "https://flakehub.com/f/nix-community/disko/*";
+    disko.inputs.nixpkgs.follows = "nixpkgs";
     hermes-agent.url = "github:NousResearch/hermes-agent";
     hermes-agent.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -15,6 +17,7 @@
       nixpkgs,
       determinate,
       sops-nix,
+      disko,
       hermes-agent,
       ...
     }@inputs:
@@ -33,6 +36,7 @@
         modules = [
           determinate.nixosModules.default
           sops-nix.nixosModules.sops
+          disko.nixosModules.default
           hermes-agent.nixosModules.default
           ./hosts/hermes
         ];
