@@ -233,25 +233,24 @@ nixos-anywhere will kexec over the existing distro and wipe the disks per
 `disk-config.nix`, so there is nothing on the current install worth
 preserving.
 
-**State 2 — target is bare-metal with no OS, and you have console access.**
+**State 2 — target is bare-metal with no OS.**
 
-The hermes host (HP Elite Mini 800 G9) has no IPMI/BMC, so this is the
-realistic starting state for reprovisions. One-time console access is enough;
-after the installer is up and SSH is reachable, the rest is headless.
+Two routes, depending on whether vPro / Intel AMT is provisioned on the host.
 
-Workflow:
+*State 2a — USB boot (one-time physical console access):*
 
-1. On your workstation, download the minimal NixOS installer ISO:
-   https://nixos.org/download/#nixos-iso
+1. On your workstation, download the NixOS minimal installer ISO
+   (https://nixos.org/download/#nixos-iso) or the Determinate Nix installer
+   ISO — any standard NixOS live ISO works.
 2. Write it to a USB stick (e.g. `dd if=nixos-minimal-*.iso of=/dev/diskN bs=4M`,
-   or use Etcher / Rufus).
+   or use Etcher / Rufus / `arduino` flashers).
 3. Plug USB + monitor + keyboard into the target; boot from USB.
 4. At the installer prompt, set a temporary root password:
    ```bash
    sudo passwd root
    ```
-5. Confirm `sshd` is running (it is, on the minimal ISO) and find the target's
-   IP:
+5. Confirm `sshd` is running (it is, on recent installer ISOs) and find the
+   target's IP:
    ```bash
    ip -4 addr show | grep inet
    ```
@@ -261,16 +260,63 @@ Workflow:
    ssh-copy-id root@<target-ip>
    ```
 
-Alternatively, build a custom NixOS installer ISO with your SSH key baked in
+Alternatively, build a custom installer ISO with your SSH key baked in
 (`nixos-generators -f iso ...`). For a one-off reprovision, `ssh-copy-id` is
 faster.
 
+*State 2b — Intel vPro / AMT IDE-R (fully remote after one-time MEBx setup):*
+
+The hermes host (HP Elite Mini 800 G9, appropriate SKU) includes Intel vPro.
+Once AMT is provisioned in MEBx, there is no further need for a USB stick,
+monitor, or keyboard on the target — every reprovision is pure-network.
+
+One-time physical setup (only required the first time, or after an AMT reset):
+
+1. Power on the target; press `Ctrl-P` at POST to enter the Intel ME BIOS
+   Extension (MEBx).
+2. Change the default MEBx password, enable AMT, enable remote access,
+   configure the network profile (DHCP is fine on a trusted LAN).
+3. Save and exit. Note the AMT IP / hostname and the new MEBx password —
+   store both in your workstation password manager.
+
+Per reprovision (fully remote):
+
+1. On your workstation, install an AMT client: MeshCommander (legacy but
+   reliable), [MeshCentral](https://meshcentral.com/), or
+   [wsman-cli](https://github.com/Openwsman/openwsman). MeshCommander's
+   IDE-R dialog is the most discoverable.
+2. Download the NixOS minimal / Determinate Nix installer ISO to the
+   workstation (same file that would otherwise go on the USB stick).
+3. Connect to the target's AMT interface (ports 16992–16995) using the MEBx
+   password.
+4. Mount the ISO via **Storage Redirection → IDE-R** (or USB-R on AMT ≥ 16).
+   Set one-time boot override to "CD/DVD".
+5. Trigger an AMT power-cycle. The target now boots the installer from the
+   workstation-hosted ISO over the network.
+6. Open the AMT **KVM** (VNC-over-AMT) or **Serial-over-LAN** session to reach
+   the installer's shell — same steps 4–6 as State 2a (set root password,
+   `ip addr`, `ssh-copy-id` from workstation).
+7. Close the AMT session, detach the IDE-R media, and run `nixos-anywhere` as
+   normal.
+
+Caveats:
+
+- IDE-R ISO size limits depend on AMT firmware; ISOs < 4 GB work on
+  essentially all AMT versions, which covers both NixOS minimal and
+  Determinate Nix.
+- AMT ports 16992–16995 must be reachable from your workstation. Some
+  corporate networks block them; confirm before committing to this route.
+- AMT KVM is hardware-accelerated video redirection, not an SSH-like
+  terminal. Type the key-authorization commands carefully; there is no
+  copy-paste unless your client supports it.
+
 **State 3 — target has IPMI/iDRAC/BMC with remote media.**
 
-Not applicable to the hermes host. For other deployments: mount a Linux rescue
-ISO (SystemRescue, Ubuntu Live, or the NixOS minimal installer) via the BMC
-web UI, then authorize your SSH key as in state 2 (but over the BMC console,
-no physical access required).
+Not applicable to the hermes host (HP Elite Mini has no dedicated BMC;
+vPro/AMT is the closest equivalent and is covered in State 2b). For other
+deployments: mount a Linux rescue ISO (SystemRescue, Ubuntu Live, or the
+NixOS minimal installer) via the BMC web UI, then authorize your SSH key
+as in state 2a.
 
 ##### Workstation prerequisites
 

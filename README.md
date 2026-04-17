@@ -115,13 +115,18 @@ target's starting state:
 - **Already running Linux (any distro):** confirm `sshd` is up, your key is in
   `~/.ssh/authorized_keys`, and the machine has outbound internet. Nothing else
   to install — nixos-anywhere will kexec over it.
-- **Bare-metal, no OS (e.g. a fresh hermes host):** boot the NixOS minimal
-  installer ISO from USB, set a root password with `passwd`, note the IP with
-  `ip -4 addr`, and `ssh-copy-id root@<target-ip>` from your workstation.
-  Console access is needed once; afterwards the install proceeds over SSH.
-- **Has IPMI/BMC with remote media:** mount a Linux rescue ISO via the BMC
-  web UI and authorize your key through its console (not applicable to the
-  hermes host, which has no BMC).
+- **Bare-metal, no OS (e.g. a fresh hermes host):** boot any NixOS live ISO
+  (minimal or Determinate Nix). Two routes:
+  - *USB:* write the ISO, plug in monitor + keyboard once, set a root
+    password, `ssh-copy-id` from your workstation, unplug and finish
+    headlessly.
+  - *Intel vPro / AMT IDE-R (fully remote):* after a one-time MEBx setup
+    (`Ctrl-P` at POST), use MeshCommander/MeshCentral to mount the ISO
+    remotely and authorize SSH through the AMT KVM. No USB or monitor on
+    the target ever after that.
+- **Has dedicated IPMI/BMC with remote media:** mount a Linux rescue ISO via
+  the BMC web UI. Not applicable to the hermes host (vPro/AMT is the
+  equivalent — see above).
 
 From your workstation, with an age private key available locally:
 
