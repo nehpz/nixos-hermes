@@ -7,6 +7,14 @@
     sops-nix.url = "https://flakehub.com/f/Mic92/sops-nix/0.1.1200";
     disko.url = "https://flakehub.com/f/nix-community/disko/*";
     disko.inputs.nixpkgs.follows = "nixpkgs";
+    # nixos-anywhere has a FlakeHub landing page but no release is currently
+    # consumable as a flake input (404 on /*, /0, /1 archive fetch), so use
+    # GitHub as a documented exception to the "inputs via FlakeHub" invariant
+    # in AGENTS.md. Pinned via flake.lock so bootstrap runs are reproducible.
+    # Revisit when upstream publishes to FlakeHub.
+    nixos-anywhere.url = "github:nix-community/nixos-anywhere";
+    nixos-anywhere.inputs.nixpkgs.follows = "nixpkgs";
+    nixos-anywhere.inputs.disko.follows = "disko";
     hermes-agent.url = "github:NousResearch/hermes-agent";
     hermes-agent.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -18,6 +26,7 @@
       determinate,
       sops-nix,
       disko,
+      nixos-anywhere,
       hermes-agent,
       ...
     }@inputs:
@@ -61,5 +70,20 @@
           };
         }
       );
+
+      # Install-time CLIs exposed as flake apps so they use the same lockfile
+      # pin as the NixOS modules. Invoke with:
+      #   nix run .#nixos-anywhere -- --flake .#nixos-hermes ...
+      #   nix run .#disko -- --mode disko hosts/hermes/disk-config.nix
+      apps = forDevSystems (system: {
+        nixos-anywhere = {
+          type = "app";
+          program = "${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere";
+        };
+        disko = {
+          type = "app";
+          program = "${disko.packages.${system}.disko}/bin/disko";
+        };
+      });
     };
 }
