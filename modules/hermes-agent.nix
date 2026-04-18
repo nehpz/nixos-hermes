@@ -108,9 +108,18 @@
     };
   };
 
-  # LD_LIBRARY_PATH injected into the systemd unit directly (not .env) so ctypes
-  # can find libopus when discord.py attempts discord.opus.load_opus() at import time,
-  # which happens before Python reads $HERMES_HOME/.env via load_hermes_dotenv().
+  # ldconfig must index libopus so ctypes.util.find_library("opus") returns a
+  # path on Linux. On NixOS, ldconfig is not set up by default on headless
+  # systems. Hermes's discord gateway calls find_library exclusively and has
+  # no Linux fallback — LD_LIBRARY_PATH alone is not consulted by find_library.
+  # environment.etc creates the conf.d entry; the activation script rebuilds
+  # the cache after /etc is in place.
+  environment.etc."ld.so.conf".text = "include /etc/ld.so.conf.d/*.conf\n";
+  environment.etc."ld.so.conf.d/hermes-libs.conf".text = "${pkgs.libopus}/lib\n";
+  system.activationScripts.hermes-ldconfig = lib.stringAfter [ "etc" ] ''
+    ${pkgs.glibc.bin}/sbin/ldconfig
+  '';
+
   systemd.services.hermes-agent.environment = {
     LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.libopus ];
   };
