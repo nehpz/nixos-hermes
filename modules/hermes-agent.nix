@@ -112,9 +112,8 @@
   # path on Linux. On NixOS, ldconfig is not set up by default on headless
   # systems. Hermes's discord gateway calls find_library exclusively and has
   # no Linux fallback — LD_LIBRARY_PATH alone is not consulted by find_library.
-  # environment.etc creates the conf.d entry; the activation script rebuilds
-  # the cache after /etc is in place.
-  environment.etc."ld.so.conf".text = "include /etc/ld.so.conf.d/*.conf\n";
+  # conf.d is the standard include mechanism; declaring ld.so.conf itself
+  # risks a conflict if another module (e.g. hardware.graphics) owns it.
   environment.etc."ld.so.conf.d/hermes-libs.conf".text = "${pkgs.libopus}/lib\n";
   system.activationScripts.hermes-ldconfig = lib.stringAfter [ "etc" ] ''
     ${pkgs.glibc.bin}/sbin/ldconfig
