@@ -40,5 +40,15 @@
       owner = "hermes";
       mode = "0400";
     };
+
+    # Agent personality — encrypted so contents remain private in the public repo.
+    # Decrypted by sops-nix at activation; the hermes-soul-md script provisions
+    # it to $HERMES_HOME on first boot only.
+    hermes-soul-md = {
+      sopsFile = ./secrets/soul.md;
+      format = "binary";
+      owner = "hermes";
+      mode = "0440";
+    };
   };
 }

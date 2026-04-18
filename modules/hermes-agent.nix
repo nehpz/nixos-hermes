@@ -117,16 +117,22 @@
 
   # Provision SOUL.md to $HERMES_HOME on first boot only. Subsequent rebuilds
   # leave the file untouched so the agent can evolve it freely at runtime.
-  # To canonicalize an evolved version: update modules/soul.md, delete the file
-  # on the host, then rebuild — the guard will re-provision from the new source.
-  system.activationScripts.hermes-soul-md = lib.stringAfter [ "hermes-agent-setup" ] ''
-    soul_path=${config.services.hermes-agent.stateDir}/.hermes/SOUL.md
-    if [ ! -f "$soul_path" ]; then
-      install \
-        -o ${config.services.hermes-agent.user} \
-        -g ${config.services.hermes-agent.group} \
-        -m 0640 \
-        ${./soul.md} "$soul_path"
-    fi
-  '';
+  # To canonicalize an evolved version: update hosts/hermes/secrets/soul.md
+  # (re-encrypt with sops), delete the file on the host, then rebuild.
+  system.activationScripts.hermes-soul-md =
+    lib.stringAfter
+      [
+        "hermes-agent-setup"
+        "setupSecrets"
+      ]
+      ''
+        soul_path=${config.services.hermes-agent.stateDir}/.hermes/SOUL.md
+        if [ ! -f "$soul_path" ]; then
+          install \
+            -o ${config.services.hermes-agent.user} \
+            -g ${config.services.hermes-agent.group} \
+            -m 0640 \
+            ${config.sops.secrets.hermes-soul-md.path} "$soul_path"
+        fi
+      '';
 }
