@@ -120,7 +120,7 @@ best when inputs are FlakeHub-sourced; do not switch a FlakeHub-published input
 back to a raw GitHub URL. Two inputs are exceptions:
 
 - `hermes-agent` (NousResearch) is not published to FlakeHub at all.
-- `nixos-anywhere` (nix-community) has a FlakeHub landing page but no
+- `nixos-anywhere` (nix-community) has a FlakeHub landing page, but no
   releases are currently consumable as a flake input (`https://flakehub.com/f/nix-community/nixos-anywhere/*`
   returns 404 on archive fetch); revisit when upstream publishes a version.
 
@@ -243,7 +243,7 @@ Two routes, depending on whether vPro / Intel AMT is provisioned on the host.
    (https://nixos.org/download/#nixos-iso) or the Determinate Nix installer
    ISO — any standard NixOS live ISO works.
 2. Write it to a USB stick (e.g. `dd if=nixos-minimal-*.iso of=/dev/diskN bs=4M`,
-   or use Etcher / Rufus / `arduino` flashers).
+   or use Etcher / Rufus).
 3. Plug USB + monitor + keyboard into the target; boot from USB.
 4. At the installer prompt, set a temporary root password:
    ```bash
