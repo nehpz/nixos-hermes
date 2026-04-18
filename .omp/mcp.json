@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "nixos": {
+      "command": "uvx",
+      "args": ["mcp-nixos"]
+    }
+  },
+  "disabledServers": [
+    "circleci-mcp-server",
+    "codacy",
+    "devin",
+    "firecrawl",
+    "morph",
+    "nia",
+    "nx-mcp",
+    "playwright",
+    "sonarqube"
+  ]
+}
