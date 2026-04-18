@@ -71,6 +71,13 @@ in
         default = "claude-sonnet-4-6";
       };
 
+      # Replaces the deprecated MESSAGING_CWD environment variable.
+      # The upstream module still injects MESSAGING_CWD into the service;
+      # UnsetEnvironment below removes it so hermes reads only config.yaml.
+      terminal = {
+        cwd = config.services.hermes-agent.workingDirectory;
+      };
+
       # Capabilities the agent may invoke.
       toolsets = [
         "hermes-cli" # Full toolset — all 36 tools including clarify. The default for interactive CLI sessions
@@ -131,6 +138,11 @@ in
   systemd.services.hermes-agent.environment = {
     PYTHONPATH = toString opusCtypesShim;
   };
+
+  # MESSAGING_CWD is deprecated in 0.10.0 in favour of terminal.cwd in config.yaml.
+  # The upstream nixosModules.nix still sets it unconditionally; UnsetEnvironment
+  # removes it from the service environment so hermes sees only the config.yaml value.
+  systemd.services.hermes-agent.serviceConfig.UnsetEnvironment = [ "MESSAGING_CWD" ];
 
   # Provision SOUL.md to $HERMES_HOME on first boot only. Subsequent rebuilds
   # leave the file untouched so the agent can evolve it freely at runtime.
