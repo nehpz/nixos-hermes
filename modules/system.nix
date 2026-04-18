@@ -32,12 +32,6 @@
     iotop
   ];
 
-  # ghostty terminfo: lets tools like less and vim handle xterm-ghostty
-  # correctly when SSHing from a ghostty client without downgrading TERM.
-  # Installs only the terminfo entry — not the terminal emulator.
-  environment.etc."terminfo/x/xterm-ghostty".source =
-    "${pkgs.ghostty}/share/terminfo/x/xterm-ghostty";
-
   environment.sessionVariables = {
     # HERMES_HOME and HERMES_MANAGED are owned by the hermes-agent module;
     # do not declare them here.
