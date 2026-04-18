@@ -51,9 +51,13 @@ in
     # placed the browser binaries (standard PATH lookup does not work for Playwright).
     # DISCORD_ALLOWED_USERS: user allowlisting is env-only; settings.discord has no
     # equivalent key — placing it here keeps it out of the secret bundle.
+    # DISCORD_HOME_CHANNEL: 0.10.0 gateway reads this env var to determine the home
+    # channel; settings.discord.home_channel populates config.yaml but is not consulted
+    # by the runtime check.
     environment = {
       PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
       DISCORD_ALLOWED_USERS = "185292472836947968";
+      DISCORD_HOME_CHANNEL = "1493934973009526884";
     };
 
     # API keys merged into $HERMES_HOME/.env at activation.
