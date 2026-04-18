@@ -116,7 +116,7 @@
   # risks a conflict if another module (e.g. hardware.graphics) owns it.
   environment.etc."ld.so.conf.d/hermes-libs.conf".text = "${pkgs.libopus}/lib\n";
   system.activationScripts.hermes-ldconfig = lib.stringAfter [ "etc" ] ''
-    ${pkgs.glibc.bin}/sbin/ldconfig -C /etc/ld.so.cache
+    ${pkgs.glibc.bin}/sbin/ldconfig -C /etc/ld.so.cache -f /etc/ld.so.conf.d/hermes-libs.conf
   '';
 
   systemd.services.hermes-agent.environment = {
