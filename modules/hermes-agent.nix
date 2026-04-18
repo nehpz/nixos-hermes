@@ -5,6 +5,25 @@
   ...
 }:
 
+# nixpkgs patches CPython with no-ldconfig.patch — ctypes.util._findSoname_ldconfig
+# unconditionally returns None. LD_LIBRARY_PATH and ldconfig cache approaches are
+# both dead. Inject a sitecustomize.py via PYTHONPATH that patches find_library("opus")
+# to return the Nix store path directly before any user code runs.
+let
+  opusCtypesShim = pkgs.writeTextDir "sitecustomize.py" ''
+    import ctypes.util as _cu
+
+    _OPUS_PATH = "${pkgs.libopus}/lib/libopus.so.0"
+    _orig = _cu.find_library
+
+    def find_library(name, *args, **kwargs):
+        if name == "opus":
+            return _OPUS_PATH
+        return _orig(name, *args, **kwargs)
+
+    _cu.find_library = find_library
+  '';
+in
 {
   services.hermes-agent = {
     enable = true;
@@ -19,9 +38,7 @@
     # playwright-driver.browsers: NixOS-wrapped browser binaries for the browser toolset.
     # ffmpeg: audio processing for ElevenLabs TTS voice bubble delivery.
     # ripgrep: fast search used by file and terminal toolsets.
-    # libopus: shared library for Discord voice channel encode/decode. discord.py loads
-    #   it via ctypes at runtime; ctypes.util.find_library fails on NixOS (no ldconfig),
-    #   so the library path is injected via LD_LIBRARY_PATH in the systemd environment below.
+    # libopus: pins the store path referenced by opusCtypesShim above.
     extraPackages = with pkgs; [
       playwright-driver.browsers
       ffmpeg
@@ -108,19 +125,11 @@
     };
   };
 
-  # ldconfig must index libopus so ctypes.util.find_library("opus") returns a
-  # path on Linux. On NixOS, ldconfig is not set up by default on headless
-  # systems. Hermes's discord gateway calls find_library exclusively and has
-  # no Linux fallback — LD_LIBRARY_PATH alone is not consulted by find_library.
-  # conf.d is the standard include mechanism; declaring ld.so.conf itself
-  # risks a conflict if another module (e.g. hardware.graphics) owns it.
-  environment.etc."ld.so.conf.d/hermes-libs.conf".text = "${pkgs.libopus}/lib\n";
-  system.activationScripts.hermes-ldconfig = lib.stringAfter [ "etc" ] ''
-    ${pkgs.glibc.bin}/sbin/ldconfig -C /etc/ld.so.cache -f /etc/ld.so.conf.d/hermes-libs.conf
-  '';
-
+  # opusCtypesShim patches ctypes.util.find_library("opus") at interpreter startup.
+  # sitecustomize.py is imported by site.py before any user code; PYTHONPATH prepends
+  # our directory so it takes precedence over any existing sitecustomize in site-packages.
   systemd.services.hermes-agent.environment = {
-    LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.libopus ];
+    PYTHONPATH = toString opusCtypesShim;
   };
 
   # Provision SOUL.md to $HERMES_HOME on first boot only. Subsequent rebuilds
