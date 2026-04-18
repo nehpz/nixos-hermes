@@ -7,11 +7,6 @@
     sops-nix.url = "https://flakehub.com/f/Mic92/sops-nix/0.1.1200";
     disko.url = "https://flakehub.com/f/nix-community/disko/*";
     disko.inputs.nixpkgs.follows = "nixpkgs";
-    # nixos-anywhere has a FlakeHub landing page but no release is currently
-    # consumable as a flake input (404 on /*, /0, /1 archive fetch), so use
-    # GitHub as a documented exception to the "inputs via FlakeHub" invariant
-    # in AGENTS.md. Pinned via flake.lock so bootstrap runs are reproducible.
-    # Revisit when upstream publishes to FlakeHub.
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
     nixos-anywhere.inputs.nixpkgs.follows = "nixpkgs";
     nixos-anywhere.inputs.disko.follows = "disko";
