@@ -14,4 +14,5 @@ repos:
         entry: nix flake check --no-build
         language: system
         pass_filenames: false
+        always_run: true
         stages: [pre-push]
