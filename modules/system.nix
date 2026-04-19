@@ -30,6 +30,7 @@
     man
     htop
     iotop
+    tree
   ];
 
   environment.sessionVariables = {
