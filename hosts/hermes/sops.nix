@@ -47,13 +47,5 @@
       mode = "0440";
     };
 
-    # Claude Code credentials for Anthropic OAuth. Seeded with the refresh token;
-    # hermes auto-refreshes the access token on first use and updates the file.
-    hermes-claude-credentials = {
-      sopsFile = ./secrets/claude-credentials.json;
-      format = "binary";
-      owner = "hermes";
-      mode = "0400";
-    };
   };
 }

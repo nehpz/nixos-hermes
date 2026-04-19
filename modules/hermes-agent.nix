@@ -169,28 +169,4 @@ in
         fi
       '';
 
-  # Provision Claude Code credentials to the hermes user's home on first boot.
-  # hermes reads ~/.claude/.credentials.json (Claude Code format) via
-  # read_claude_code_credentials() and auto-refreshes the access token using
-  # the refresh token. Provision-once so hermes can overwrite the file with
-  # fresh tokens; subsequent rebuilds leave it untouched.
-  system.activationScripts.hermes-claude-credentials =
-    lib.stringAfter
-      [
-        "hermes-agent-setup"
-        "setupSecrets"
-      ]
-      ''
-        creds_dir=${config.services.hermes-agent.stateDir}/.claude
-        creds_path=$creds_dir/.credentials.json
-        if [ ! -f "$creds_path" ]; then
-          mkdir -p "$creds_dir"
-          chown ${config.services.hermes-agent.user}:${config.services.hermes-agent.group} "$creds_dir"
-          install \
-            -o ${config.services.hermes-agent.user} \
-            -g ${config.services.hermes-agent.group} \
-            -m 0600 \
-            ${config.sops.secrets.hermes-claude-credentials.path} "$creds_path"
-        fi
-      '';
 }
