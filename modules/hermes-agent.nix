@@ -10,10 +10,11 @@
     enable = true;
     addToSystemPackages = true;
 
-    # Seeds auth.json on first activation only (authFileForceOverwrite defaults
-    # to false). Runtime token refreshes survive all subsequent rebuilds.
-    # Active provider is anthropic; codex available for subagent delegation.
+    # Seeds auth.json on first activation only.
+    # Runtime token refreshes survive all subsequent rebuilds.
+    # Active provider is anthropic.
     authFile = config.sops.secrets.auth_json.path;
+    authFileForceOverwrite = false;
 
     # Packages required by enabled toolsets.
     # playwright-driver.browsers: NixOS-wrapped browser binaries for the browser toolset.
@@ -50,14 +51,20 @@
 
     settings = {
       model = {
+        # Explicit provider overrides any OpenRouter default provider.
         provider = "anthropic";
-        # Explicit base_url overrides any OpenRouter URL that hermes may have written
-        # to config.yaml on first boot. Without this, the disk value survives the
-        # deep-merge and requests would be routed through OpenRouter regardless of provider.
-        base_url = "https://api.anthropic.com";
         default = "claude-sonnet-4-6";
       };
-
+      auxiliary = {
+        vision = {
+          provider = "google-gemini-cli";
+          model = "gemini-3.1-pro-preview";
+        };
+        web_extract = {
+          provider = "google-gemini-cli";
+          model = "gemini-3-flash-preview";
+        };
+      };
       # Replaces the deprecated MESSAGING_CWD environment variable.
       # The upstream module still injects MESSAGING_CWD into the service;
       # UnsetEnvironment below removes it so hermes reads only config.yaml.
@@ -115,6 +122,17 @@
       checkpoints = {
         enabled = true;
         max_snapshots = 50;
+      };
+    };
+    mcpServers = {
+      nixos = {
+        command = "uvx";
+        args = [ "mcp-nixos" ];
+      };
+      deepwiki = {
+        url = "https://mcp.deepwiki.com/mcp";
+        registry = "io.windsurf/deepwiki";
+        timeout = 180;
       };
     };
   };
