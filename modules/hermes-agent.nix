@@ -32,7 +32,7 @@ in
     # Seeds auth.json on first activation only (authFileForceOverwrite defaults
     # to false). Runtime token refreshes survive all subsequent rebuilds.
     # Active provider is anthropic; codex available for subagent delegation.
-    authFile = config.sops.secrets.anthropic_auth_json.path;
+    authFile = config.sops.secrets.auth_json.path;
 
     # Packages required by enabled toolsets.
     # playwright-driver.browsers: NixOS-wrapped browser binaries for the browser toolset.

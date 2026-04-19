@@ -32,11 +32,7 @@
     # first activation only; runtime token refreshes are never overwritten.
     # To re-auth: update tokens here, set authFileForceOverwrite = true, rebuild,
     # then revert to false.
-    anthropic_auth_json = {
-      owner = "hermes";
-      mode = "0400";
-    };
-    codex_auth_json = {
+    auth_json = {
       owner = "hermes";
       mode = "0400";
     };
