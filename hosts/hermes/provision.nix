@@ -12,8 +12,18 @@
       ]
       ''
         soul_path=${config.services.hermes-agent.stateDir}/.hermes/SOUL.md
+        soul_dir=$(dirname "$soul_path")
+        # Create .hermes/ with hermes ownership before install so the service
+        # user can write into the directory once it starts.
+        if [ ! -d "$soul_dir" ]; then
+          install -d \
+            -o ${config.services.hermes-agent.user} \
+            -g ${config.services.hermes-agent.group} \
+            -m 0750 \
+            "$soul_dir"
+        fi
         if [ ! -f "$soul_path" ]; then
-          install -D \
+          install \
             -o ${config.services.hermes-agent.user} \
             -g ${config.services.hermes-agent.group} \
             -m 0640 \
