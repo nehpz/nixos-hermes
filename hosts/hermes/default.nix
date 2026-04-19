@@ -5,7 +5,9 @@
     ./hardware.nix
     ./disk-config.nix
     ./sops.nix
+    ./provision.nix
     ../../modules/system.nix
+    ../../modules/packages.nix
     ../../modules/hermes-agent.nix
     ../../modules/users.nix
   ];

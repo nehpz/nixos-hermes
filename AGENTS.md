@@ -20,12 +20,17 @@ nixos-hermes/
 │       ├── default.nix                  # host entry: identity constants + imports
 │       ├── disk-config.nix              # disko layout (imported; generates fileSystems.*)
 │       ├── hardware.nix                 # boot, initrd, kernel, GPU, ZFS services (filesystems via disko)
+│       ├── provision.nix                # host-specific first-boot provisioning (activation scripts)
 │       ├── sops.nix                     # sops-nix secret bindings (host-specific)
 │       └── secrets/                     # committed SOPS-encrypted files
-└── modules/
-    ├── system.nix                       # locale, tz, networking, packages, sudo
-    ├── hermes-agent.nix                 # hermes service declaration
-    └── users.nix                        # immutable user + SSH key declarations
+├── modules/
+│   ├── system.nix                       # locale, tz, networking, packages, sudo
+│   ├── hermes-agent.nix                 # hermes service declaration
+│   ├── packages.nix                     # nixpkgs overlays + NixOS packaging workarounds
+│   └── users.nix                        # immutable user + SSH key declarations
+└── packages/
+    └── agent-browser/
+        └── default.nix                  # prebuilt platform binary from npm tarball
 ```
 
 ---
@@ -150,6 +155,37 @@ After first install:
 
 - Lives alongside `secrets/` so that `./secrets/...` paths resolve correctly.
 - The `sops age` key path (`/etc/secrets/age.key`) must not change without updating this file.
+
+### `hosts/hermes/provision.nix`
+
+*Host-specific first-boot provisioning.*
+
+- Contains activation scripts that run once on first boot to seed runtime state.
+- Guards (`[ ! -f ]`, `[ ! -d ]`) ensure rebuilds do not clobber files the agent
+  has evolved at runtime.
+- Lives in `hosts/hermes/` (not `modules/`) because provisioning is host-specific,
+  not portable across hosts.
+- To re-provision a file: delete it on the host, then rebuild.
+
+### `modules/packages.nix`
+
+*nixpkgs overlays and NixOS packaging workarounds.*
+
+- Owns the nixpkgs overlay that injects packages not yet in the pinned channel.
+  Add new local packages here (see `packages/`) until they land upstream.
+- Also owns workarounds for NixOS packaging behaviour that affect services on this
+  host (e.g. the `opusCtypesShim` for CPython's patched `ctypes.util.find_library`).
+- Exposes shims via the overlay (e.g. `pkgs.opusCtypesShim`) so service modules
+  can consume them without coupling to this file directly.
+
+### `packages/<name>/default.nix`
+
+*Local package derivations.*
+
+- One directory per package; derivation fetches prebuilt binaries where available.
+- Injected into nixpkgs via the overlay in `modules/packages.nix`.
+- Versioned by Renovate; extract to a shared flake (`nehpz/nursery`) when multi-host.
+
 
 ### `modules/system.nix`
 
