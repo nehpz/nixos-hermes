@@ -13,7 +13,7 @@
       ''
         soul_path=${config.services.hermes-agent.stateDir}/.hermes/SOUL.md
         if [ ! -f "$soul_path" ]; then
-          install \
+          install -D \
             -o ${config.services.hermes-agent.user} \
             -g ${config.services.hermes-agent.group} \
             -m 0640 \

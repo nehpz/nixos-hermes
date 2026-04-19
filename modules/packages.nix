@@ -1,7 +1,12 @@
-{ pkgs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 # Local package overrides — packages not yet available in the pinned nixpkgs channel.
-# Also owns NixOS packaging workarounds required by services running on this host.
+# Also owns NixOS packaging workarounds that are packaging concerns, not service config.
 let
   # nixpkgs patches CPython with no-ldconfig.patch — ctypes.util._findSoname_ldconfig
   # unconditionally returns None. LD_LIBRARY_PATH and ldconfig cache approaches are
@@ -25,13 +30,9 @@ in
   nixpkgs.overlays = [
     (final: _: {
       agent-browser = final.callPackage ../packages/agent-browser { };
+      # Exposed via overlay so consumers (hermes-agent.nix) can reference
+      # pkgs.opusCtypesShim without packages.nix coupling to any service.
+      inherit opusCtypesShim;
     })
   ];
-
-  # opusCtypesShim patches ctypes.util.find_library("opus") at interpreter startup.
-  # sitecustomize.py is imported by site.py before any user code; PYTHONPATH prepends
-  # our directory so it takes precedence over any existing sitecustomize in site-packages.
-  systemd.services.hermes-agent.environment = {
-    PYTHONPATH = toString opusCtypesShim;
-  };
 }

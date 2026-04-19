@@ -19,7 +19,7 @@
     # playwright-driver.browsers: NixOS-wrapped browser binaries for the browser toolset.
     # ffmpeg: audio processing for ElevenLabs TTS voice bubble delivery.
     # ripgrep: fast search used by file and terminal toolsets.
-    # libopus: pins the store path referenced by opusCtypesShim above.
+    # libopus: pins the store path referenced by the opus ctypes shim (see modules/packages.nix).
     extraPackages = with pkgs; [
       playwright-driver.browsers
       ffmpeg
@@ -123,5 +123,12 @@
   # The upstream nixosModules.nix still sets it unconditionally; UnsetEnvironment
   # removes it from the service environment so hermes sees only the config.yaml value.
   systemd.services.hermes-agent.serviceConfig.UnsetEnvironment = [ "MESSAGING_CWD" ];
+
+  # opusCtypesShim patches ctypes.util.find_library("opus") at interpreter startup.
+  # sitecustomize.py is imported by site.py before any user code; PYTHONPATH prepends
+  # our directory so it takes precedence over any existing sitecustomize in site-packages.
+  systemd.services.hermes-agent.environment = {
+    PYTHONPATH = toString pkgs.opusCtypesShim;
+  };
 
 }
