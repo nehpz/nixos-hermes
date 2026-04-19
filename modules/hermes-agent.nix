@@ -45,7 +45,7 @@ in
       ripgrep
       libopus
       codex
-      pkgs.agent-browser
+      pkgs."agent-browser"
     ];
 
     # Non-secret environment variables injected into the service.
