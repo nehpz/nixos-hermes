@@ -51,16 +51,20 @@
     environmentFiles = [ config.sops.secrets."hermes-env".path ];
 
     settings = {
-      # model = {
-      # Explicit provider overrides any OpenRouter default provider.
-      # provider = "anthropic";
-      # default = "claude-sonnet-4-6";
-      # };
+      model = {
+        # Explicit provider overrides any OpenRouter default provider.
+        default = "claude-sonnet-4-6";
+        provider = "anthropic";
+        base_url = "https://api.anthropic.com";
+      };
+
       # Replaces the deprecated MESSAGING_CWD environment variable.
       # The upstream module still injects MESSAGING_CWD into the service;
       # UnsetEnvironment below removes it so hermes reads only config.yaml.
       terminal = {
+        backend = "local";
         cwd = config.services.hermes-agent.workingDirectory;
+        timeout = 180;
       };
 
       # Capabilities the agent may invoke.
@@ -103,11 +107,11 @@
       # Compress context at 50% of the model's context window.
       compression = {
         enabled = true;
-        threshold = 0.50;
+        threshold = 0.85;
       };
 
       agent = {
-        max_turns = 50; # Hard ceiling on turns per conversation
+        max_turns = 60; # Hard ceiling on turns per conversation
       };
 
       checkpoints = {
