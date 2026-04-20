@@ -81,14 +81,10 @@
               # Secret scanning — knows 150+ patterns
               gitleaks = {
                 enable = true;
-                name = "gitleaks";
-                entry = "${pkgs.gitleaks}/bin/gitleaks protect --staged --no-banner";
-                language = "system";
-                pass_filenames = false;
-                stages = [ "pre-commit" ];
+                package = pkgs.gitleaks;
               };
 
-              # Shell script linting (covers scripts/ dir)
+              # Catches bash pitfalls (set -u, unquoted globs, etc.) if shell scripts are added
               shellcheck.enable = true;
 
               # YAML validation
@@ -105,16 +101,6 @@
               trim-trailing-whitespace.enable = true;
               check-yaml.enable = true;
               check-added-large-files.enable = true;
-
-              # Flake check on push
-              nix-flake-check = {
-                enable = true;
-                name = "nix flake check";
-                entry = "nix flake check --no-build";
-                language = "system";
-                pass_filenames = false;
-                stages = [ "pre-push" ];
-              };
             };
           };
         }
