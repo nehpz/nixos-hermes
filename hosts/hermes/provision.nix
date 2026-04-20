@@ -30,4 +30,24 @@
             ${config.sops.secrets.hermes-soul-md.path} "$soul_path"
         fi
       '';
+
+  # Write ~/.git-credentials on every activation so git push works after
+  # rebuilds without manual intervention. The token lives in the hermes-env
+  # sops secret and is sourced from the decrypted env file at runtime.
+  # No first-boot guard — the file must be refreshed whenever the secret changes.
+  system.activationScripts.hermes-git-credentials =
+    lib.stringAfter
+      [
+        "setupSecrets"
+        "users"
+      ]
+      ''
+        creds_path=${config.services.hermes-agent.stateDir}/.git-credentials
+        token=$(grep "^GITHUB_TOKEN=" ${config.sops.secrets."hermes-env".path} | cut -d= -f2 | tr -d '"')
+        if [ -n "$token" ]; then
+          printf 'https://yui-hermes:%s@github.com\n' "$token" > "$creds_path"
+          chmod 600 "$creds_path"
+          chown ${config.services.hermes-agent.user}:${config.services.hermes-agent.group} "$creds_path"
+        fi
+      '';
 }
