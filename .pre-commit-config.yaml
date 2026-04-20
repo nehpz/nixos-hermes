@@ -9,6 +9,13 @@ repos:
         pass_filenames: true
         stages: [pre-commit]
 
+      - id: no-plaintext-secrets
+        name: block plaintext secrets
+        language: system
+        entry: scripts/check-secrets.sh
+        pass_filenames: true
+        stages: [pre-commit]
+
       - id: nix-flake-check
         name: nix flake check
         entry: nix flake check --no-build
