@@ -27,7 +27,8 @@
       ripgrep
       libopus
       codex
-      pkgs."agent-browser"
+      pkgs.agent-browser
+      pkgs.mcp-nixos
     ];
 
     # Non-secret environment variables injected into the service.
@@ -54,16 +55,6 @@
         # Explicit provider overrides any OpenRouter default provider.
         provider = "anthropic";
         default = "claude-sonnet-4-6";
-      };
-      auxiliary = {
-        vision = {
-          provider = "google-gemini-cli";
-          model = "gemini-3.1-pro-preview";
-        };
-        web_extract = {
-          provider = "google-gemini-cli";
-          model = "gemini-3-flash-preview";
-        };
       };
       # Replaces the deprecated MESSAGING_CWD environment variable.
       # The upstream module still injects MESSAGING_CWD into the service;
@@ -126,8 +117,8 @@
     };
     mcpServers = {
       nixos = {
-        command = "uvx";
-        args = [ "mcp-nixos" ];
+        command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
+        args = [ ];
       };
     };
   };
