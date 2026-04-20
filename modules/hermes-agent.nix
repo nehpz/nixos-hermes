@@ -51,11 +51,11 @@
     environmentFiles = [ config.sops.secrets."hermes-env".path ];
 
     settings = {
-      model = {
-        # Explicit provider overrides any OpenRouter default provider.
-        provider = "anthropic";
-        default = "claude-sonnet-4-6";
-      };
+      # model = {
+      # Explicit provider overrides any OpenRouter default provider.
+      # provider = "anthropic";
+      # default = "claude-sonnet-4-6";
+      # };
       # Replaces the deprecated MESSAGING_CWD environment variable.
       # The upstream module still injects MESSAGING_CWD into the service;
       # UnsetEnvironment below removes it so hermes reads only config.yaml.
