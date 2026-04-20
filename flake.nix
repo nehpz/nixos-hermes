@@ -81,7 +81,11 @@
               # Secret scanning — knows 150+ patterns
               gitleaks = {
                 enable = true;
-                package = pkgs.gitleaks;
+                name = "gitleaks";
+                entry = "${pkgs.gitleaks}/bin/gitleaks protect --staged --no-banner";
+                language = "system";
+                pass_filenames = false;
+                stages = [ "pre-commit" ];
               };
 
               # Catches bash pitfalls (set -u, unquoted globs, etc.) if shell scripts are added
