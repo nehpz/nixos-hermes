@@ -1,8 +1,11 @@
 { config, lib, ... }:
 
-# Host-specific first-boot provisioning. Each activation script runs once;
-# the guard ensures rebuilds do not clobber runtime-evolved state.
-# To re-provision: delete the target file on the host, then rebuild.
+# Host-specific activation scripts. Two categories:
+#   - One-shot provisioning: runs once on first boot; a file-existence guard
+#     ensures rebuilds do not clobber runtime-evolved state. To re-provision,
+#     delete the target file on the host and rebuild.
+#   - Recurring refresh: runs on every activation with no guard; used for
+#     credentials and other state that must stay in sync with sops secrets.
 {
   system.activationScripts.hermes-soul-md =
     lib.stringAfter
@@ -43,11 +46,21 @@
       ]
       ''
         creds_path=${config.services.hermes-agent.stateDir}/.git-credentials
-        token=$(grep "^GITHUB_TOKEN=" ${config.sops.secrets."hermes-env".path} | cut -d= -f2 | tr -d '"')
+        token=$(grep "^GITHUB_TOKEN=" ${
+          config.sops.secrets."hermes-env".path
+        } | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//')
         if [ -n "$token" ]; then
+          # Create with correct ownership and mode atomically before writing
+          # content — avoids a race where the file is briefly world-readable.
+          install -D -m 600 \
+            -o ${config.services.hermes-agent.user} \
+            -g ${config.services.hermes-agent.group} \
+            /dev/null "$creds_path"
           printf 'https://yui-hermes:%s@github.com\n' "$token" > "$creds_path"
-          chmod 600 "$creds_path"
-          chown ${config.services.hermes-agent.user}:${config.services.hermes-agent.group} "$creds_path"
+        else
+          # Token removed from secret — revoke file so stale credentials
+          # do not persist on disk.
+          rm -f "$creds_path"
         fi
       '';
 }
