@@ -1,0 +1,18 @@
+extends: default
+
+rules:
+  # document-start (---) is optional; many valid YAML files omit it
+  document-start: disable
+
+  # truthy: GitHub Actions uses 'on:' as a key which yamllint flags
+  truthy: disable
+
+  # Line length: SOPS encrypted values are inherently long; set a
+  # generous limit and ignore the secrets dir entirely via ignore below
+  line-length:
+    max: 120
+    allow-non-breakable-words: true
+    level: warning
+
+ignore: |
+  hosts/hermes/secrets/

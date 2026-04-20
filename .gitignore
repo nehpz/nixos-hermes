@@ -14,7 +14,6 @@
 [Ll]ib64
 [Ll]ocal
 [Ss]cripts
-
 # Sensitive data
 
 .env/
@@ -89,6 +88,7 @@ Icon
 
 
 # prek/pre-commit
+.pre-commit-config.yaml
 .prek/
 .pre-commit-cache/
 
