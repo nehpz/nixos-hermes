@@ -41,6 +41,7 @@
   system.activationScripts.hermes-git-credentials =
     lib.stringAfter
       [
+        "hermes-agent-setup"
         "setupSecrets"
         "users"
       ]
