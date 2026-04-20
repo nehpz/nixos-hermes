@@ -19,6 +19,7 @@
     ];
   };
   users.users.hermes = {
+    isNormalUser = true;
     description = "Hermes user account";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID0inarJ3Em+01Y22ahDmJkbhevhwuFFrWyIEl0CjkzE"
