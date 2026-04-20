@@ -47,9 +47,11 @@
       ]
       ''
         creds_path=${config.services.hermes-agent.stateDir}/.git-credentials
-        token=$(grep "^GITHUB_TOKEN=" ${
-          config.sops.secrets."hermes-env".path
-        } | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//')
+        token=$(grep "^GITHUB_TOKEN=" ${config.sops.secrets."hermes-env".path} | cut -d= -f2-)
+        # Strip surrounding double quotes using bash parameter expansion —
+        # sed is not available in the activation script PATH.
+        token=''${token#\"}
+        token=''${token%\"}
         if [ -n "$token" ]; then
           # Create with correct ownership and mode atomically before writing
           # content — avoids a race where the file is briefly world-readable.
