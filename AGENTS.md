@@ -20,7 +20,7 @@ nixos-hermes/
 │       ├── default.nix                  # host entry: identity constants + imports
 │       ├── disk-config.nix              # disko layout (imported; generates fileSystems.*)
 │       ├── hardware.nix                 # boot, initrd, kernel, GPU, ZFS services (filesystems via disko)
-│       ├── provision.nix                # host-specific first-boot provisioning (activation scripts)
+│       ├── provision.nix                # host-specific activation scripts (one-shot provisioning + recurring refresh)
 │       ├── sops.nix                     # sops-nix secret bindings (host-specific)
 │       └── secrets/                     # committed SOPS-encrypted files
 ├── modules/
@@ -158,11 +158,10 @@ After first install:
 
 ### `hosts/hermes/provision.nix`
 
-*Host-specific first-boot provisioning.*
+*Host-specific activation scripts. Two categories:*
 
-- Contains activation scripts that run once on first boot to seed runtime state.
-- Guards (`[ ! -f ]`, `[ ! -d ]`) ensure rebuilds do not clobber files the agent
-  has evolved at runtime.
+- **One-shot provisioning:** activation scripts with a file-existence guard that run once on first boot to seed runtime state. Rebuilds do not clobber runtime-evolved state. To re-provision: delete the target file on the host, then rebuild.
+- **Recurring refresh:** activation scripts with no guard that run on every activation. Used for credentials and other state that must stay in sync with sops secrets.
 - Lives in `hosts/hermes/` (not `modules/`) because provisioning is host-specific,
   not portable across hosts.
 - To re-provision a file: delete it on the host, then rebuild.
