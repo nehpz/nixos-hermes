@@ -129,11 +129,6 @@
         command = "uvx";
         args = [ "mcp-nixos" ];
       };
-      deepwiki = {
-        url = "https://mcp.deepwiki.com/mcp";
-        registry = "io.windsurf/deepwiki";
-        timeout = 180;
-      };
     };
   };
 
