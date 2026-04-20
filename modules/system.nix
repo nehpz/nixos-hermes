@@ -31,6 +31,10 @@
     htop
     iotop
     tree
+    jq
+    python3
+    ripgrep
+    unzip
   ];
 
   environment.sessionVariables = {
