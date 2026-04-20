@@ -1,0 +1,4 @@
+[files]
+# .gitignore uses glob character-class patterns like [Ii]nclude, [Ss]cripts
+# that typos incorrectly flags as misspellings.
+extend-exclude = [".gitignore"]

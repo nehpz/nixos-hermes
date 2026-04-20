@@ -12,6 +12,8 @@
     nixos-anywhere.inputs.disko.follows = "disko";
     hermes-agent.url = "github:NousResearch/hermes-agent";
     hermes-agent.inputs.nixpkgs.follows = "nixpkgs";
+    git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/*";
+    git-hooks.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -23,6 +25,7 @@
       disko,
       nixos-anywhere,
       hermes-agent,
+      git-hooks,
       ...
     }@inputs:
     let
@@ -50,18 +53,69 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          hooks = self.checks.${system}.pre-commit-check;
         in
         {
           default = pkgs.mkShell {
-            packages = [
-              pkgs.prek
-              pkgs.nixfmt-rfc-style
+            packages = hooks.enabledPackages ++ [
               pkgs.sops
+              pkgs.prek
             ];
-            shellHook = ''
-              prek install --hook-type pre-commit 2>/dev/null || true
-              prek install --hook-type pre-push 2>/dev/null || true
-            '';
+            shellHook = hooks.shellHook;
+          };
+        }
+      );
+
+      checks = forDevSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          pre-commit-check = git-hooks.lib.${system}.run {
+            src = ./.;
+            hooks = {
+              # Nix formatting
+              nixfmt-rfc-style.enable = true;
+
+              # Secret scanning — knows 150+ patterns
+              gitleaks = {
+                enable = true;
+                name = "gitleaks";
+                entry = "${pkgs.gitleaks}/bin/gitleaks protect --staged --no-banner";
+                language = "system";
+                pass_filenames = false;
+                stages = [ "pre-commit" ];
+              };
+
+              # Shell script linting (covers scripts/ dir)
+              shellcheck.enable = true;
+
+              # YAML validation
+              yamllint.enable = true;
+
+              # GitHub Actions linting
+              actionlint.enable = true;
+
+              # Typo detection across all text files
+              typos.enable = true;
+
+              # General hygiene
+              end-of-file-fixer.enable = true;
+              trim-trailing-whitespace.enable = true;
+              check-yaml.enable = true;
+              check-added-large-files.enable = true;
+
+              # Flake check on push
+              nix-flake-check = {
+                enable = true;
+                name = "nix flake check";
+                entry = "nix flake check --no-build";
+                language = "system";
+                pass_filenames = false;
+                stages = [ "pre-push" ];
+              };
+            };
           };
         }
       );
