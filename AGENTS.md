@@ -87,7 +87,7 @@ nixos-hermes/
 
 ### `flake.nix`
 
-*Single host output: `nixosConfigurations.nixos-hermes`.* 
+*Single host output: `nixosConfigurations.nixos-hermes`.*
 
 - Manages input pins.
 - Do not add multiple hosts without a corresponding refactor of the module tree.

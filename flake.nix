@@ -91,8 +91,22 @@
               # Catches bash pitfalls (set -u, unquoted globs, etc.) if shell scripts are added
               shellcheck.enable = true;
 
-              # YAML validation
-              yamllint.enable = true;
+              # YAML validation — inline config to handle dotfile exclusion in nix sandbox
+              yamllint = {
+                enable = true;
+                settings.configuration = ''
+                  extends: default
+                  rules:
+                    document-start: disable
+                    truthy: disable
+                    line-length:
+                      max: 120
+                      allow-non-breakable-words: true
+                      level: warning
+                  ignore: |
+                    hosts/hermes/secrets/
+                '';
+              };
 
               # GitHub Actions linting
               actionlint.enable = true;
