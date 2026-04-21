@@ -1,0 +1,11 @@
+# .gitleaks.toml — gitleaks configuration for this repository
+#
+# The age key in tests/assets/age-test-key.txt is a throwaway key committed
+# intentionally — it encrypts only dummy test values, never real secrets.
+# Allowlisted here so gitleaks doesn't block commits involving test assets.
+
+[allowlist]
+  description = "Intentionally committed test assets"
+  paths = [
+    "tests/assets/age-test-key\\.txt",
+  ]

@@ -10,6 +10,11 @@ A fully declarative NixOS flake configuration for a bare-metal AI agent host run
 
 ```text
 nixos-hermes/
+├── tests/
+│   ├── assets/
+│   │   ├── age-test-key.txt             # throwaway age key (committed — encrypts only dummy test data)
+│   │   └── test-secrets.yaml            # sops-encrypted dummy secrets for VM tests
+│   └── default.nix                      # nixosTest VM test suite
 ├── flake.nix                            # flake inputs/outputs, host definition
 ├── .github/workflows/flakehub-publish-rolling.yml # CI: publish to FlakeHub on push to main
 ├── .sops.yaml                           # sops encryption policy (age)
@@ -80,6 +85,30 @@ nixos-hermes/
 - The repo is **public**. Never commit SSH private keys, age private keys, plaintext secrets, IP-to-identity mappings, or personal information.
 - The public SSH authorized keys already in the repo are acceptable (by design).
 - Commit messages: imperative mood, present tense, ≤72 chars subject line.
+
+### Testing Ladder
+
+Right tool, right job. Pick the lightest tool that covers the change.
+
+| Change type | Tool | Root? |
+|---|---|---|
+| Nix eval / syntax | `nix flake check --no-build` | No |
+| Package add / module option | `nixos-rebuild dry-build --flake .#nixos-hermes` | No |
+| systemd unit change | `nixos-rebuild dry-activate` | Yes |
+| Activation script change | `nix build .#checks.x86_64-linux.<test>` (VM) | No |
+| Real secrets / hardware / network | `nixos-rebuild test` | Yes |
+
+The VM tests live under `tests/` and run via QEMU — no root needed.
+VM tests are the right tool when activation scripts change, but may also
+be valuable for other changes where the build alone is insufficient.
+Use judgment — the table above is guidance, not a hard constraint.
+`dry-activate` runs `switch-to-configuration dry-activate` to diff
+systemd units without applying changes — needs root but does not
+mutate the running system.
+
+**Exception to the age private key rule:** `tests/assets/age-test-key.txt`
+is a throwaway key committed intentionally — it encrypts only dummy test
+values and has no real-world value. It is allowlisted in `.gitleaks.toml`.
 
 ---
 

@@ -1,5 +1,6 @@
 keys:
   - &host_key age1p8tyygvcz35t3w236sjkgrxkmldnhwqg50j4pdpqlf83wspplawqsq2jx2
+  - &test_key age1zdq6nkafrl4wg3r2h89f7rtstkw2nre4hd9pyj22ts6gwg97v5dsyjlvyn
 
 creation_rules:
   - path_regex: .secrets/.*\.yaml$
@@ -16,3 +17,8 @@ creation_rules:
     key_groups:
       - age:
           - *host_key
+
+  - path_regex: tests/assets/.*\.yaml$
+    key_groups:
+      - age:
+          - *test_key
