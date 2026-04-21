@@ -46,20 +46,20 @@
     };
 
     # API keys merged into $HERMES_HOME/.env at activation.
-    # Current keys: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN
+    # Current keys: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN, OPENROUTER_API_KEY
     # DISCORD_ALLOWED_USERS is in environment above (non-secret).
     environmentFiles = [ config.sops.secrets."hermes-env".path ];
 
     settings = {
       model = {
         # Explicit provider overrides any OpenRouter default provider.
+        # base_url omitted — https://api.anthropic.com is the hardcoded default.
         default = "claude-sonnet-4-6";
         provider = "anthropic";
-        base_url = "https://api.anthropic.com";
       };
 
       # Automatic provider failover on rate limits, overload, or connection
-      # failures. OpenRouter has its own API key (not OAuth) so it survives
+      # failures. OpenRouter uses an API key (not OAuth) so it survives
       # Anthropic token expiry or refresh failures.
       fallback_model = {
         provider = "openrouter";
