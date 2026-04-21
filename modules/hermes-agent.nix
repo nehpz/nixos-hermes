@@ -58,6 +58,14 @@
         base_url = "https://api.anthropic.com";
       };
 
+      # Automatic provider failover on rate limits, overload, or connection
+      # failures. OpenRouter has its own API key (not OAuth) so it survives
+      # Anthropic token expiry or refresh failures.
+      fallback_model = {
+        provider = "openrouter";
+        model = "anthropic/claude-sonnet-4-6";
+      };
+
       # Replaces the deprecated MESSAGING_CWD environment variable.
       # The upstream module still injects MESSAGING_CWD into the service;
       # UnsetEnvironment below removes it so hermes reads only config.yaml.
