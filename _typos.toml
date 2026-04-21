@@ -1,5 +1,6 @@
 [files]
 # .gitignore uses glob character-class patterns like [Ii]nclude, [Ss]cripts
 # that typos incorrectly flags as misspellings.
-# hosts/hermes/secrets/ contains SOPS ciphertext which triggers false positives.
-extend-exclude = [".gitignore", "hosts/hermes/secrets/"]
+# hosts/hermes/secrets/ and tests/assets/ contain SOPS ciphertext which
+# triggers false positives on random byte sequences in base64.
+extend-exclude = [".gitignore", "hosts/hermes/secrets/", "tests/assets/"]

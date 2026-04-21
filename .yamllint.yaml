@@ -16,3 +16,4 @@ rules:
 
 ignore: |
   hosts/hermes/secrets/
+  tests/assets/

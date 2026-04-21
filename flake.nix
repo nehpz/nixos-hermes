@@ -70,6 +70,10 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
+          vmTests = pkgs.callPackage ./tests {
+            inherit sops-nix hermes-agent;
+            lib = nixpkgs.lib;
+          };
         in
         {
           pre-commit-check = git-hooks.lib.${system}.run {
@@ -82,7 +86,7 @@
               gitleaks = {
                 enable = true;
                 name = "gitleaks";
-                entry = "${pkgs.gitleaks}/bin/gitleaks protect --staged --no-banner";
+                entry = "${pkgs.gitleaks}/bin/gitleaks protect --staged --no-banner --config .gitleaks.toml";
                 language = "system";
                 pass_filenames = false;
                 stages = [ "pre-commit" ];
@@ -105,6 +109,7 @@
                       level: warning
                   ignore: |
                     hosts/hermes/secrets/
+                    tests/assets/
                 '';
               };
 
@@ -121,6 +126,13 @@
               check-added-large-files.enable = true;
             };
           };
+        }
+        // nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
+          # VM tests — QEMU only available on Linux.
+          # Run with: nix build .#checks.x86_64-linux.<name>
+          # See AGENTS.md for the testing ladder — use VM tests only for
+          # activation script changes.
+          inherit (vmTests) activation-git-credentials;
         }
       );
 
