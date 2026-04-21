@@ -99,9 +99,16 @@ Right tool, right job. Pick the lightest tool that covers the change.
 | Real secrets / hardware / network | `nixos-rebuild test` | Yes |
 
 The VM tests live under `tests/` and run via QEMU — no root needed.
+VM tests are the right tool when activation scripts change, but may also
+be valuable for other changes where the build alone is insufficient.
+Use judgment — the table above is guidance, not a hard constraint.
 `dry-activate` runs `switch-to-configuration dry-activate` to diff
 systemd units without applying changes — needs root but does not
 mutate the running system.
+
+**Exception to the age private key rule:** `tests/assets/age-test-key.txt`
+is a throwaway key committed intentionally — it encrypts only dummy test
+values and has no real-world value. It is allowlisted in `.gitleaks.toml`.
 
 ---
 

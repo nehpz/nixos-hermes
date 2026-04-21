@@ -1,7 +1,7 @@
 # Plan: Cloudflare Tunnel + Hermes Webhook for GitHub PR Events
 
 **Date:** 2026-04-20
-**Status:** Draft — awaiting review before execution
+**Status:** Draft — pending CF tunnel token and subdomain decision from nehpz
 
 ---
 

@@ -1,7 +1,7 @@
 # Plan: NixOS Test Infrastructure
 
 **Date:** 2026-04-20
-**Status:** Draft — awaiting review before execution
+**Status:** Implemented — PR #12
 
 ---
 
@@ -70,7 +70,7 @@ nix run nixpkgs#sops -- --encrypt \
   --output tests/assets/test-secrets.yaml \
   /dev/stdin <<EOF
 hermes-env: |
-  GITHUB_TOKEN="test-token-value"
+  GITHUB_TOKEN="TEST_TOKEN_WITH_EQUALS_AAA1234567890==suffix"
   ELEVENLABS_API_KEY="test-elevenlabs-key"
   DISCORD_BOT_TOKEN="test-discord-token"
 EOF
@@ -214,18 +214,25 @@ token=$(grep "^GITHUB_TOKEN=" ...
 
 ---
 
-## Risks & Open Questions
+## Risks & Mitigations (resolved)
 
-- **`hermes-agent-setup` stub** — the real script is provided by the
-  `hermes-agent` nixosModule. In the test we stub it with `"true"`. Need to
-  verify sops-nix's `setupSecrets` ordering still works correctly without
-  importing the full hermes-agent module.
-- **systemd-boot vs legacy boot** — the real host uses systemd-boot. The
-  age key injection via `boot.initrd.postDeviceCommands` is for legacy boot.
-  May need `systemd.services.sops-install-secrets.preStart` approach instead
-  (as sops-nix does for the `user-passwords-sysusers` test).
-- **`forDevSystems` vs Linux-only** — VM tests can't run on darwin. Need
-  `lib.optionalAttrs` to guard the check, or split `checks` into
-  `devChecks` (both platforms) and `vmChecks` (linux only).
-- **Test secrets content** — dummy values only. Should not resemble real
-  key formats to avoid any scanner false positives.
+- **`hermes-agent-setup` stub** — resolved by importing the real
+  `hermes-agent.nixosModules.default` with `services.hermes-agent.enable = true`.
+  The activation scripts run exactly as on the live host. The agent service
+  starts but produces deprecation warnings (harmless — no valid runtime config).
+
+- **Age key injection (initrd vs stage-2 boundary)** — `sops.age.keyFile`
+  explicitly rejects Nix store paths (world-readable, security constraint).
+  `boot.initrd.postDeviceCommands` is therefore required to copy the key to
+  `/run/age-keys.txt` before activation. This is the same pattern sops-nix
+  uses in its own integration tests. `chmod 600` used (corrected from the
+  `chmod 700` in the sops-nix reference — execute bit unnecessary on a key file).
+
+- **`forDevSystems` vs Linux-only** — resolved with
+  `nixpkgs.lib.optionalAttrs (system == "x86_64-linux")` in `checks`.
+  Pre-commit hooks run on both platforms; VM tests run on Linux only.
+
+- **Test secrets content** — dummy values use edge-case characters (`=` in
+  token, special chars in other values) to stress-test parsing. SOPS ciphertext
+  excluded from typos and yamllint scanners via `_typos.toml` and inline
+  yamllint config. Test age key allowlisted in `.gitleaks.toml`.

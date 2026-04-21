@@ -72,7 +72,6 @@
           pkgs = nixpkgs.legacyPackages.${system};
           vmTests = pkgs.callPackage ./tests {
             inherit sops-nix hermes-agent;
-            lib = nixpkgs.lib;
           };
         in
         {

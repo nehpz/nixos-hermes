@@ -4,11 +4,10 @@
 #   nix build .#checks.x86_64-linux.activation-git-credentials
 #
 # These tests require QEMU — they run unprivileged via nixosTest.
-# Use the testing ladder in AGENTS.md to decide when to run VM tests
-# vs lighter-weight checks.
+# Consult the testing ladder in AGENTS.md to decide which tool is
+# appropriate for the change you are making.
 {
   pkgs,
-  lib,
   sops-nix,
   hermes-agent,
 }:
@@ -32,12 +31,13 @@ let
         hermes-agent.nixosModules.default
       ];
 
-      # Inject test age key via initrd — same pattern as sops-nix's own tests.
-      # The key is copied to /run/age-keys.txt during early boot so sops-nix
-      # can decrypt secrets during the activation phase.
+      # Inject test age key via initrd — required because sops.age.keyFile
+      # rejects paths inside the Nix store (world-readable). Copying to /run
+      # during early boot places the key outside the store before activation.
+      # This is the same pattern sops-nix uses in its own integration tests.
       boot.initrd.postDeviceCommands = ''
-        cp -r ${testAgeKeyFile} /run/age-keys.txt
-        chmod 700 /run/age-keys.txt
+        cp ${testAgeKeyFile} /run/age-keys.txt
+        chmod 600 /run/age-keys.txt
       '';
 
       sops.age.keyFile = "/run/age-keys.txt";
@@ -109,7 +109,7 @@ in
 
       # Content must be correct — token contains = signs (tests cut -d= -f2- fix)
       machine.succeed(
-          "grep -qF 'https://yui-hermes:ghp_AAAAAAAAAAAAAAAA1234567890==test@github.com'"
+          "grep -qF 'https://yui-hermes:TEST_TOKEN_WITH_EQUALS_AAA1234567890==suffix@github.com'"
           " /var/lib/hermes/.git-credentials"
       )
     '';
