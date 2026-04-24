@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; width: 500px; height: 500px; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script src="/var/lib/hermes/profile-pics/node_modules/p5/lib/p5.min.js"></script>
+<script>
+p5.disableFriendlyErrors = true;
+
+new p5(function(p) {
+  p.setup = function() {
+    p.createCanvas(500, 500);
+    p.pixelDensity(1);
+    p.randomSeed(7777);
+    p.noiseSeed(7777);
+    p.noLoop();
+
+    const W = 500, H = 500;
+    const CX = W / 2, CY = H / 2;
+    const VOID_R = 78;
+    const N_PARTICLES = 5000;
+    const ITERS = 800;
+
+    // ---- Background: near-black with breathing violet-blue noise ----
+    let bgBuf = p.createGraphics(W, H);
+    bgBuf.pixelDensity(1);
+    bgBuf.loadPixels();
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let n = p.noise(x * 0.006, y * 0.006);
+        let idx = (y * W + x) * 4;
+        // Base: #080510 with a soft violet-blue breath
+        bgBuf.pixels[idx]     = Math.round(8  + n * 10);
+        bgBuf.pixels[idx + 1] = Math.round(5  + n * 6);
+        bgBuf.pixels[idx + 2] = Math.round(16 + n * 22);
+        bgBuf.pixels[idx + 3] = 255;
+      }
+    }
+    bgBuf.updatePixels();
+
+    // ---- Particle accumulation buffer ----
+    // We'll write directly into pixels for maximum control
+    let pxW = W, pxH = H;
+    // Accumulate RGB as floats, then map to 0-255
+    let accR = new Float32Array(pxW * pxH);
+    let accG = new Float32Array(pxW * pxH);
+    let accB = new Float32Array(pxW * pxH);
+
+    // ---- Initialize particles ----
+    let px_arr = new Float32Array(N_PARTICLES);
+    let py_arr = new Float32Array(N_PARTICLES);
+    let pvx    = new Float32Array(N_PARTICLES);
+    let pvy    = new Float32Array(N_PARTICLES);
+    let pAngle = new Float32Array(N_PARTICLES);
+    let pBalR  = new Float32Array(N_PARTICLES);
+    let pOrbit = new Float32Array(N_PARTICLES);
+    let pNOff  = new Float32Array(N_PARTICLES);
+
+    for (let i = 0; i < N_PARTICLES; i++) {
+      let ang = p.random(p.TWO_PI);
+      // Balance radius: most particles cluster 85-160px from center
+      // Perlin noise warps the ring — creates irregular, lumpy density
+      let noiseVal = p.noise(
+        Math.cos(ang) * 1.5 + 3.1,
+        Math.sin(ang) * 1.5 + 7.4
+      );
+      let balR = VOID_R + 12 + noiseVal * 130 + p.random(0, 40);
+      balR = Math.max(VOID_R + 6, Math.min(210, balR));
+
+      let r = balR + p.random(-20, 20);
+      r = Math.max(VOID_R + 3, r);
+
+      px_arr[i] = CX + Math.cos(ang) * r;
+      py_arr[i] = CY + Math.sin(ang) * r;
+      pvx[i] = 0;
+      pvy[i] = 0;
+      pAngle[i] = ang;
+      pBalR[i] = balR;
+      // Slow orbital drift — mix of directions for organic feel
+      pOrbit[i] = (p.random() < 0.5 ? 1 : -1) * p.random(0.0004, 0.0015);
+      pNOff[i] = p.random(1000);
+    }
+
+    // ---- Simulation loop ----
+    // Weight contribution: more iterations = more accumulated density
+    // Each draw is a fractional deposit — additive accumulation
+    const deposit = 1.2; // per iteration per particle
+
+    for (let iter = 0; iter < ITERS; iter++) {
+      let timeZ = iter * 0.004;
+
+      for (let i = 0; i < N_PARTICLES; i++) {
+        let dx = CX - px_arr[i];
+        let dy = CY - py_arr[i];
+        let dist = Math.sqrt(dx * dx + dy * dy) + 0.001;
+
+        // Net radial force: attraction pulls in, repulsion pushes out
+        // Repulsion is tuned so equilibrium ~= balR
+        let attract = 0.18 / dist;
+        let repulse = (pBalR[i] * pBalR[i] * 0.22) / (dist * dist * dist);
+        let netF = attract - repulse;
+
+        pvx[i] += (dx / dist) * netF;
+        pvy[i] += (dy / dist) * netF;
+
+        // Tangential orbital drift
+        pAngle[i] += pOrbit[i];
+        pvx[i] += -Math.sin(pAngle[i]) * 0.007;
+        pvy[i] +=  Math.cos(pAngle[i]) * 0.007;
+
+        // Perlin turbulence — breaks up symmetry
+        let nx = (p.noise(px_arr[i] * 0.004, py_arr[i] * 0.004, timeZ + pNOff[i]) - 0.5);
+        let ny = (p.noise(px_arr[i] * 0.004 + 99, py_arr[i] * 0.004 + 99, timeZ + pNOff[i]) - 0.5);
+        pvx[i] += nx * 0.05;
+        pvy[i] += ny * 0.05;
+
+        // Damping
+        pvx[i] *= 0.84;
+        pvy[i] *= 0.84;
+
+        px_arr[i] += pvx[i];
+        py_arr[i] += pvy[i];
+
+        // Hard void exclusion
+        let ddx = px_arr[i] - CX;
+        let ddy = py_arr[i] - CY;
+        let dd = Math.sqrt(ddx * ddx + ddy * ddy);
+        if (dd < VOID_R + 1) {
+          let push = (VOID_R + 1) / dd;
+          px_arr[i] = CX + ddx * push;
+          py_arr[i] = CY + ddy * push;
+          pvx[i] *= -0.25;
+          pvy[i] *= -0.25;
+        }
+
+        // Soft outer boundary — loose, lets some particles scatter
+        if (dd > 245) {
+          px_arr[i] = CX + (ddx / dd) * 245;
+          py_arr[i] = CY + (ddy / dd) * 245;
+          pvx[i] *= 0.3;
+          pvy[i] *= 0.3;
+        }
+
+        // ---- Accumulate particle into pixel buffer ----
+        let px_ = Math.round(px_arr[i]);
+        let py_ = Math.round(py_arr[i]);
+        if (px_ < 0 || px_ >= pxW || py_ < 0 || py_ >= pxH) continue;
+
+        // Color: distance-based, violet-to-lavender
+        // innermost (close to void) = cool near-white lavender #d4c8f0
+        // mid-ring = purple #6b2fa0
+        // outer = deep violet #1a0a2e
+        let nd = Math.max(0, Math.min(1, (dd - VOID_R) / (238 - VOID_R)));
+
+        let cr, cg, cb;
+        if (nd < 0.12) {
+          // innermost — near-white lavender, hot
+          let t = nd / 0.12;
+          cr = Math.round(212 + (107 - 212) * t);  // 212 -> 107
+          cg = Math.round(200 + (47  - 200) * t);  // 200 -> 47
+          cb = Math.round(240 + (160 - 240) * t);  // 240 -> 160
+        } else if (nd < 0.35) {
+          // mid — purple
+          let t = (nd - 0.12) / 0.23;
+          cr = Math.round(107 + (74  - 107) * t);  // 107 -> 74
+          cg = Math.round(47  + (26  - 47)  * t);  // 47  -> 26
+          cb = Math.round(160 + (110 - 160) * t);  // 160 -> 110
+        } else {
+          // outer — deep violet, fading
+          let t = Math.min(1, (nd - 0.35) / 0.65);
+          cr = Math.round(74  + (26  - 74)  * t);  // 74 -> 26
+          cg = Math.round(26  + (10  - 26)  * t);  // 26 -> 10
+          cb = Math.round(110 + (46  - 110) * t);  // 110 -> 46
+        }
+
+        let pidx = py_ * pxW + px_;
+        accR[pidx] += cr * deposit;
+        accG[pidx] += cg * deposit;
+        accB[pidx] += cb * deposit;
+      }
+    }
+
+    // ---- Map accumulation to pixel values ----
+    // Find 99th percentile for normalization (prevent blown-out hot spots)
+    let maxVal = 0;
+    for (let i = 0; i < accR.length; i++) {
+      let v = Math.max(accR[i], accG[i], accB[i]);
+      if (v > maxVal) maxVal = v;
+    }
+    // Tone-map: use a soft exposure rather than hard clamp
+    // exposure tuned so the bright inner ring glows but outer field remains visible
+    let exposure = 3000 / maxVal;
+
+    // ---- Particle render buffer ----
+    let pBuf = p.createGraphics(W, H);
+    pBuf.pixelDensity(1);
+    pBuf.background(0, 0);
+    pBuf.loadPixels();
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let i = y * W + x;
+        // Tone map: channel-aware gamma to preserve cool violet/lavender bias
+        // Blue channel gets a softer curve (stays brighter) than red
+        let r = Math.min(255, Math.round(Math.pow(accR[i] * exposure / 255, 0.65) * 255));
+        let g = Math.min(255, Math.round(Math.pow(accG[i] * exposure / 255, 0.60) * 255));
+        let b = Math.min(255, Math.round(Math.pow(accB[i] * exposure / 255, 0.48) * 255));
+        let idx = i * 4;
+        pBuf.pixels[idx]     = r;
+        pBuf.pixels[idx + 1] = g;
+        pBuf.pixels[idx + 2] = b;
+        pBuf.pixels[idx + 3] = 255;
+      }
+    }
+    pBuf.updatePixels();
+
+    // ---- Bloom: manual box blur on downsampled pixel data ----
+    // Downsample pBuf pixels to W/4 x H/4
+    const BW = Math.floor(W / 4), BH = Math.floor(H / 4);
+    pBuf.loadPixels();
+    let bloomPixels = new Uint8Array(BW * BH * 4);
+    for (let by = 0; by < BH; by++) {
+      for (let bx = 0; bx < BW; bx++) {
+        let sr = 0, sg = 0, sb = 0, count = 0;
+        // Average 4x4 block from source
+        for (let dy = 0; dy < 4; dy++) {
+          for (let dx = 0; dx < 4; dx++) {
+            let sx = bx * 4 + dx, sy = by * 4 + dy;
+            if (sx < W && sy < H) {
+              let si = (sy * W + sx) * 4;
+              sr += pBuf.pixels[si];
+              sg += pBuf.pixels[si + 1];
+              sb += pBuf.pixels[si + 2];
+              count++;
+            }
+          }
+        }
+        let bi = (by * BW + bx) * 4;
+        bloomPixels[bi]     = Math.round(sr / count);
+        bloomPixels[bi + 1] = Math.round(sg / count);
+        bloomPixels[bi + 2] = Math.round(sb / count);
+        bloomPixels[bi + 3] = 255;
+      }
+    }
+    // Box blur the downsampled bloom (radius 4)
+    let blurred = new Uint8Array(BW * BH * 4);
+    const BRAD = 4;
+    for (let by = 0; by < BH; by++) {
+      for (let bx = 0; bx < BW; bx++) {
+        let sr = 0, sg = 0, sb = 0, count = 0;
+        for (let ky = -BRAD; ky <= BRAD; ky++) {
+          for (let kx = -BRAD; kx <= BRAD; kx++) {
+            let nx = bx + kx, ny = by + ky;
+            if (nx >= 0 && nx < BW && ny >= 0 && ny < BH) {
+              let bi2 = (ny * BW + nx) * 4;
+              sr += bloomPixels[bi2];
+              sg += bloomPixels[bi2 + 1];
+              sb += bloomPixels[bi2 + 2];
+              count++;
+            }
+          }
+        }
+        let bi = (by * BW + bx) * 4;
+        blurred[bi]     = Math.round(sr / count);
+        blurred[bi + 1] = Math.round(sg / count);
+        blurred[bi + 2] = Math.round(sb / count);
+        blurred[bi + 3] = 255;
+      }
+    }
+
+    // ---- Composite ----
+    p.blendMode(p.BLEND);
+    p.image(bgBuf, 0, 0);
+
+    p.blendMode(p.ADD);
+    p.image(pBuf, 0, 0);
+
+    // Manually composite bloom at full size via pixel ADD
+    p.loadPixels();
+    const BLOOM_ALPHA = 0.35;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let bx = Math.floor(x / 4), by = Math.floor(y / 4);
+        bx = Math.min(bx, BW - 1);
+        by = Math.min(by, BH - 1);
+        let bi = (by * BW + bx) * 4;
+        let pi = (y * W + x) * 4;
+        p.pixels[pi]     = Math.min(255, p.pixels[pi]     + Math.round(blurred[bi]     * BLOOM_ALPHA));
+        p.pixels[pi + 1] = Math.min(255, p.pixels[pi + 1] + Math.round(blurred[bi + 1] * BLOOM_ALPHA));
+        p.pixels[pi + 2] = Math.min(255, p.pixels[pi + 2] + Math.round(blurred[bi + 2] * BLOOM_ALPHA));
+      }
+    }
+    p.blendMode(p.BLEND);
+
+    // ---- Vignette: pixel-based, single pass ----
+    p.loadPixels();
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let dx2 = (x - CX) / (W * 0.5);
+        let dy2 = (y - CY) / (H * 0.5);
+        let vd = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        // Vignette kicks in at ~0.55 radius, fully dark at 1.1
+        let va = Math.max(0, Math.min(1, (vd - 0.55) / 0.55));
+        va = va * va * va * 0.94;
+        let idx = (y * W + x) * 4;
+        p.pixels[idx]     = Math.round(p.pixels[idx]     * (1 - va));
+        p.pixels[idx + 1] = Math.round(p.pixels[idx + 1] * (1 - va));
+        p.pixels[idx + 2] = Math.round(p.pixels[idx + 2] * (1 - va));
+      }
+    }
+
+    // ---- Film grain ----
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let g = (Math.random() - 0.5) * 28;
+        let idx = (y * W + x) * 4;
+        p.pixels[idx]     = Math.max(0, Math.min(255, p.pixels[idx]     + g));
+        p.pixels[idx + 1] = Math.max(0, Math.min(255, p.pixels[idx + 1] + g));
+        p.pixels[idx + 2] = Math.max(0, Math.min(255, p.pixels[idx + 2] + g));
+      }
+    }
+    p.updatePixels();
+
+    window._p5Ready = true;
+  };
+
+  p.draw = function() {};
+});
+</script>
+</body>
+</html>

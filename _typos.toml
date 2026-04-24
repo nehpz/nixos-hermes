@@ -3,4 +3,4 @@
 # that typos incorrectly flags as misspellings.
 # hosts/hermes/secrets/ and tests/assets/ contain SOPS ciphertext which
 # triggers false positives on random byte sequences in base64.
-extend-exclude = [".gitignore", "hosts/hermes/secrets/", "tests/assets/"]
+extend-exclude = [".gitignore", "hosts/hermes/secrets/", "tests/assets/", "assets/"]
