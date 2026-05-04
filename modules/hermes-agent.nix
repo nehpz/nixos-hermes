@@ -11,7 +11,7 @@
 
     # Seeds auth.json on first activation only.
     # Runtime token refreshes survive all subsequent rebuilds.
-    # Active provider is nous (DeepSeek V4 Flash via Nous inference API).
+    # Active provider is nous (MiniMax M2.7 via Nous inference API).
     authFile = config.sops.secrets.auth_json.path;
     authFileForceOverwrite = false;
 
@@ -30,8 +30,8 @@
       libopus
       claude-code
       codex
-      llm-agents.omp
-      llm-agents.agent-browser
+      pkgs.llm-agents.omp
+      pkgs.llm-agents.agent-browser
       mcp-nixos
     ];
 
