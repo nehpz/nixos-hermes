@@ -1,5 +1,4 @@
 {
-  config,
   pkgs,
   lib,
   nixpkgs-llama,
@@ -50,7 +49,7 @@ in
     # llm-agents.nix provides claude-code, codex, omp, agent-browser, and many more.
     # Uses shared-nixpkgs overlay so packages build against our pkgs (not blueprint thunks).
     llm-agents.overlays.shared-nixpkgs
-    (final: _: {
+    (_final: _: {
       # Exposed via overlay so consumers (hermes-agent.nix) can reference
       # pkgs.opusCtypesShim without packages.nix coupling to any service.
       inherit opusCtypesShim;

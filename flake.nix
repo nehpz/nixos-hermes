@@ -45,6 +45,8 @@
         "x86_64-linux"
       ];
       forDevSystems = nixpkgs.lib.genAttrs devSystems;
+      # treefmt-nix from llm-agents powers `nix fmt`.
+      treefmt-nix = llm-agents.inputs.treefmt-nix;
     in
     {
       nixosConfigurations.nixos-hermes = nixpkgs.lib.nixosSystem {
@@ -57,6 +59,17 @@
           ./hosts/hermes
         ];
       };
+
+      # Expose `nix fmt` for all dev systems.
+      # Formats Nix files with nixfmt-rfc-style + deadnix (from ./treefmt.nix).
+      formatter = forDevSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+        in
+        treefmtEval.config.build.wrapper
+      );
 
       devShells = forDevSystems (
         system:
