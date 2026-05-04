@@ -31,11 +31,8 @@ nixos-hermes/
 ├── modules/
 │   ├── system.nix                       # locale, tz, networking, packages, sudo
 │   ├── hermes-agent.nix                 # hermes service declaration
-│   ├── packages.nix                     # nixpkgs overlays + NixOS packaging workarounds
+│   ├── packages.nix                     # nixpkgs overlays (llm-agents.nix + local workarounds)
 │   └── users.nix                        # immutable user + SSH key declarations
-└── packages/
-    └── agent-browser/
-        └── default.nix                  # prebuilt platform binary from npm tarball
 ```
 
 ---

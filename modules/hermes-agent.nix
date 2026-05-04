@@ -12,7 +12,7 @@
 
     # Seeds auth.json on first activation only.
     # Runtime token refreshes survive all subsequent rebuilds.
-    # Active provider is anthropic.
+    # Active provider is nous (DeepSeek V4 Flash via Nous inference API).
     authFile = config.sops.secrets.auth_json.path;
     authFileForceOverwrite = false;
 
@@ -21,14 +21,19 @@
     # ffmpeg: audio processing for ElevenLabs TTS voice bubble delivery.
     # ripgrep: fast search used by file and terminal toolsets.
     # libopus: pins the store path referenced by the opus ctypes shim (see modules/packages.nix).
+    # claude-code, codex: AI coding agents — nixpkgs provides both as of May 2026.
+    # omp: terminal-based multi-model coding agent from numtide/llm-agents.nix overlay.
+    # agent-browser: headless browser automation CLI from llm-agents.nix (built from source, auto-updated daily).
     extraPackages = with pkgs; [
       playwright-driver.browsers
       ffmpeg
       ripgrep
       libopus
+      claude-code
       codex
-      pkgs.agent-browser
-      pkgs.mcp-nixos
+      llm-agents.omp
+      llm-agents.agent-browser
+      mcp-nixos
     ];
 
     # Non-secret environment variables injected into the service.
@@ -52,15 +57,15 @@
 
     settings = {
       model = {
-        # Explicit provider overrides any OpenRouter default provider.
-        # base_url omitted — https://api.anthropic.com is the hardcoded default.
-        default = "claude-sonnet-4-6";
-        provider = "anthropic";
+        # Nous inference API for DeepSeek V4 Flash.
+        base_url = "https://inference-api.nousresearch.com/v1";
+        default = "deepseek/deepseek-v4-flash";
+        provider = "nous";
       };
 
       # Automatic provider failover on rate limits, overload, or connection
       # failures. OpenRouter uses an API key (not OAuth) so it survives
-      # Anthropic token expiry or refresh failures.
+      # Nous inference token expiry or refresh failures.
       fallback_model = {
         provider = "openrouter";
         model = "anthropic/claude-sonnet-4-6";
