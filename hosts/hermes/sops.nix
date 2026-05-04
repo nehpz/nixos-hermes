@@ -1,4 +1,4 @@
-{ config, ... }:
+{ ... }:
 
 {
   sops.defaultSopsFile = ./secrets/hermes-secrets.yaml;

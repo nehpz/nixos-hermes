@@ -24,7 +24,7 @@ let
   # binary will not start (no valid config/secrets for the service) but
   # activation scripts run before systemd units and succeed independently.
   hermesBaseModule =
-    { config, lib, ... }:
+    { config, ... }:
     {
       imports = [
         sops-nix.nixosModules.sops

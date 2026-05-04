@@ -31,11 +31,8 @@ nixos-hermes/
 ├── modules/
 │   ├── system.nix                       # locale, tz, networking, packages, sudo
 │   ├── hermes-agent.nix                 # hermes service declaration
-│   ├── packages.nix                     # nixpkgs overlays + NixOS packaging workarounds
+│   ├── packages.nix                     # nixpkgs overlays (llm-agents.nix + local workarounds)
 │   └── users.nix                        # immutable user + SSH key declarations
-└── packages/
-    └── agent-browser/
-        └── default.nix                  # prebuilt platform binary from npm tarball
 ```
 
 ---
@@ -145,6 +142,8 @@ values and has no real-world value. It is allowlisted in `.gitleaks.toml`.
   - `nix-community/nixos-anywhere`
     - No release consumable as a flake input (`https://flakehub.com/f/nix-community/nixos-anywhere/*` returns 404 on archive fetch).
     - Pinned via `flake.lock` so bootstrap runs are reproducible; revisit when upstream publishes a version.
+  - `numtide/llm-agents.nix`
+    - Not published to FlakeHub at this time.
 
 ### `hosts/hermes/default.nix`
 
@@ -200,20 +199,11 @@ After first install:
 *nixpkgs overlays and NixOS packaging workarounds.*
 
 - Owns the nixpkgs overlay that injects packages not yet in the pinned channel.
-  Add new local packages here (see `packages/`) until they land upstream.
+  Community overlays (e.g. `llm-agents`) are added here until they land upstream.
 - Also owns workarounds for NixOS packaging behaviour that affect services on this
   host (e.g. the `opusCtypesShim` for CPython's patched `ctypes.util.find_library`).
 - Exposes shims via the overlay (e.g. `pkgs.opusCtypesShim`) so service modules
   can consume them without coupling to this file directly.
-
-### `packages/<name>/default.nix`
-
-*Local package derivations.*
-
-- One directory per package; derivation fetches prebuilt binaries where available.
-- Injected into nixpkgs via the overlay in `modules/packages.nix`.
-- Versioned by Renovate; extract to a shared flake (`nehpz/nursery`) when multi-host.
-
 
 ### `modules/system.nix`
 

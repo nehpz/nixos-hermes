@@ -4,6 +4,11 @@
   inputs = {
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0";
+    # nixpkgs-llama tracks a nixpkgs commit that ships llama-cpp >= b8637, which is
+    # required for Gemma 4 (gemma4 arch) support.  Used only for the llama-cpp overlay
+    # in modules/packages.nix.  Remove once FlakeHub's NixOS/nixpkgs/0 advances past
+    # nixpkgs commit a4bf06618f0b5ee50f14ed8f0da77d34ecc19160 (currently at b6981).
+    nixpkgs-llama.url = "github:NixOS/nixpkgs/0726a0ecb6d4e08f6adced58726b95db924cef57";
     sops-nix.url = "https://flakehub.com/f/Mic92/sops-nix/0.1.1200";
     disko.url = "https://flakehub.com/f/nix-community/disko/*";
     disko.inputs.nixpkgs.follows = "nixpkgs";
@@ -12,6 +17,8 @@
     nixos-anywhere.inputs.disko.follows = "disko";
     hermes-agent.url = "github:NousResearch/hermes-agent";
     hermes-agent.inputs.nixpkgs.follows = "nixpkgs";
+    llm-agents.url = "github:numtide/llm-agents.nix";
+    llm-agents.inputs.nixpkgs.follows = "nixpkgs";
     git-hooks.url = "https://flakehub.com/f/cachix/git-hooks.nix/*";
     git-hooks.inputs.nixpkgs.follows = "nixpkgs";
   };
@@ -20,11 +27,13 @@
     {
       self,
       nixpkgs,
+      nixpkgs-llama,
       determinate,
       sops-nix,
       disko,
       nixos-anywhere,
       hermes-agent,
+      llm-agents,
       git-hooks,
       ...
     }@inputs:
@@ -36,10 +45,12 @@
         "x86_64-linux"
       ];
       forDevSystems = nixpkgs.lib.genAttrs devSystems;
+      # treefmt-nix from llm-agents powers `nix fmt`.
+      treefmt-nix = llm-agents.inputs.treefmt-nix;
     in
     {
       nixosConfigurations.nixos-hermes = nixpkgs.lib.nixosSystem {
-        specialArgs = { inherit inputs; };
+        specialArgs = { inherit inputs nixpkgs-llama llm-agents; };
         modules = [
           determinate.nixosModules.default
           sops-nix.nixosModules.sops
@@ -48,6 +59,17 @@
           ./hosts/hermes
         ];
       };
+
+      # Expose `nix fmt` for all dev systems.
+      # Formats Nix files with nixfmt-rfc-style + deadnix (from ./treefmt.nix).
+      formatter = forDevSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+        in
+        treefmtEval.config.build.wrapper
+      );
 
       devShells = forDevSystems (
         system:
