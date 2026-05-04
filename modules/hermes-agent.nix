@@ -56,9 +56,9 @@
 
     settings = {
       model = {
-        # Nous inference API for DeepSeek V4 Flash.
+        # Nous inference API for MiniMax M2.7.
         base_url = "https://inference-api.nousresearch.com/v1";
-        default = "deepseek/deepseek-v4-flash";
+        default = "minimax/minimax-m2.7";
         provider = "nous";
       };
 
@@ -67,7 +67,7 @@
       # Nous inference token expiry or refresh failures.
       fallback_model = {
         provider = "openrouter";
-        model = "anthropic/claude-sonnet-4-6";
+        model = "openai/gpt-5.5";
       };
 
       # Replaces the deprecated MESSAGING_CWD environment variable.
