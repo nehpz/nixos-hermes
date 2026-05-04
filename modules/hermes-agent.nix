@@ -34,6 +34,7 @@
       llm-agents.omp
       llm-agents.agent-browser
       mcp-nixos
+      uv
     ];
 
     # Non-secret environment variables injected into the service.
