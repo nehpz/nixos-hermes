@@ -9,6 +9,7 @@
     ../../modules/system.nix
     ../../modules/packages.nix
     ../../modules/hermes-agent.nix
+    ../../modules/hermes-webui.nix
     ../../modules/users.nix
   ];
 
@@ -21,4 +22,9 @@
   system.stateVersion = "25.05";
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   nix.settings.trusted-users = [ "admin" ];
+
+  services.hermes-webui = {
+    enable = true;
+    # password = config.sops.secrets."hermes-webui".path;  # set after first deploy
+  };
 }
