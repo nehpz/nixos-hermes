@@ -96,8 +96,11 @@ in
         EnvironmentFile = [ envFile ];
         LoadCredential = lib.optionals (cfg.password != null) [ "password:${cfg.password}" ];
 
-        # Hardening
+        # Hardening. Keep the filesystem read-only by default, but allow
+        # hermes-webui to manage profiles, settings, sessions, and credentials
+        # under HERMES_HOME.
         ProtectSystem = "strict";
+        ReadWritePaths = [ "/var/lib/hermes" ];
         PrivateTmp = true;
         NoNewPrivileges = true;
       };
