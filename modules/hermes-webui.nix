@@ -17,14 +17,16 @@ let
     hash = "sha256-7zUDGCWNC/whuC4V79E3Nye+J0/M8ehTN75EWArGx2s=";
   };
 
-  # hermes-agent package and source files
-  hermes-pkg = inputs.hermes-agent.packages.${pkgs.stdenv.hostPlatform.system}.default;
-  hermes-venv-python = "${hermes-pkg.hermesVenv}/bin/python3";
-  hermes-agent-src = hermes-pkg.outPath;
+  # hermes-agent package and source files. Use the configured package so this
+  # module follows any future services.hermes-agent.package override, and use
+  # the flake input outPath for the source tree expected by hermes-webui.
+  hermes-pkg = config.services.hermes-agent.package;
+  hermes-venv-python = "${hermes-pkg.passthru.hermesVenv}/bin/python3";
+  hermes-agent-src = inputs.hermes-agent.outPath;
 
   # Build python path for run_agent. Keep site-packages first so vendored pip
   # packages never shadow Nix-provided dependencies.
-  hermes-venv-sp = "${hermes-pkg.hermesVenv}/${pkgs.python3.sitePackages}";
+  hermes-venv-sp = "${hermes-pkg.passthru.hermesVenv}/${pkgs.python3.sitePackages}";
   python-path = "${hermes-venv-sp}:${webui-src}:${hermes-agent-src}";
 
   startScript = pkgs.writeShellScript "hermes-webui-start" ''
@@ -57,8 +59,10 @@ in
       type = lib.types.port;
     };
     stateDir = lib.mkOption {
+      readOnly = true;
       default = "/var/lib/hermes/webui";
       type = lib.types.path;
+      description = "Systemd-managed state directory for hermes-webui.";
     };
     password = lib.mkOption {
       default = null;
