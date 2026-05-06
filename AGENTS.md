@@ -31,6 +31,7 @@ nixos-hermes/
 ├── modules/
 │   ├── system.nix                       # locale, tz, networking, packages, sudo
 │   ├── hermes-agent.nix                 # hermes service declaration
+│   ├── hermes-webui.nix                 # hermes web UI service declaration
 │   ├── packages.nix                     # nixpkgs overlays (llm-agents.nix + local workarounds)
 │   └── users.nix                        # immutable user + SSH key declarations
 ```
@@ -218,6 +219,15 @@ After first install:
 
 - All `services.hermes-agent.*` options belong here.
 - Secrets are referenced by name from the `sops` bindings.
+
+### `modules/hermes-webui.nix`
+
+*The `hermes-webui` service declaration.*
+
+- Owns all `services.hermes-webui.*` options and systemd unit settings.
+- Self-enables for the single-host deployment, matching the `hermes-agent` module pattern.
+- References the `hermes-webui` password by name from the `sops` bindings.
+- Binds to loopback only; do not open a firewall port unless explicitly requested.
 
 ### `modules/users.nix`
 
