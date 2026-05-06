@@ -24,10 +24,10 @@ let
   hermes-venv-python = "${hermes-pkg.passthru.hermesVenv}/bin/python3";
   hermes-agent-src = inputs.hermes-agent.outPath;
 
-  # Build python path for run_agent. Keep site-packages first so vendored pip
-  # packages never shadow Nix-provided dependencies.
-  hermes-venv-sp = "${hermes-pkg.passthru.hermesVenv}/${pkgs.python3.sitePackages}";
-  python-path = "${hermes-venv-sp}:${webui-src}:${hermes-agent-src}";
+  # The ExecStart interpreter is already hermesVenv Python, so it supplies its
+  # own site-packages. PYTHONPATH only needs source trees for webui api/* and
+  # hermes-agent's lazy run_agent imports.
+  python-path = "${webui-src}:${hermes-agent-src}";
 
   startScript = pkgs.writeShellScript "hermes-webui-start" ''
     set -eu
@@ -45,7 +45,8 @@ let
       "HERMES_WEBUI_PORT=${toString cfg.port}"
       "HERMES_WEBUI_STATE_DIR=${cfg.stateDir}"
       "HERMES_WEBUI_AGENT_DIR=${hermes-agent-src}"
-      "HERMES_HOME=/var/lib/hermes"
+      "HERMES_HOME=/var/lib/hermes/.hermes"
+      "HERMES_BASE_HOME=/var/lib/hermes/.hermes"
       "PYTHONPATH=${python-path}"
     ]
     + "\n"
