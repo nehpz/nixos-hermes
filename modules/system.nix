@@ -35,6 +35,7 @@
     python3
     ripgrep
     unzip
+    gh
     uv # Python package manager — required for hindsight-embed setup
   ];
 
