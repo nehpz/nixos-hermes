@@ -29,11 +29,35 @@ let
   # hermes-agent's lazy run_agent imports.
   python-path = "${webui-src}:${hermes-agent-src}";
 
+  settingsPatchScript = pkgs.writeText "hermes-webui-settings.py" ''
+    import json
+    from pathlib import Path
+
+    settings_path = Path("${cfg.stateDir}") / "settings.json"
+    settings = {}
+    if settings_path.exists():
+        try:
+            content = settings_path.read_text(encoding="utf-8")
+            if content.strip():
+                loaded = json.loads(content)
+                if not isinstance(loaded, dict):
+                    raise ValueError("settings.json must contain an object")
+                settings = loaded
+        except Exception:
+            # Preserve a corrupt or unexpected settings file rather than
+            # overwriting user preferences with a partial replacement.
+            raise SystemExit(0)
+    if settings.get("show_cli_sessions") is not True:
+        settings["show_cli_sessions"] = True
+        settings_path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+  '';
+
   startScript = pkgs.writeShellScript "hermes-webui-start" ''
     set -eu
     if [ -n "''${CREDENTIALS_DIRECTORY:-}" ] && [ -f "$CREDENTIALS_DIRECTORY/password" ]; then
       export HERMES_WEBUI_PASSWORD="$(cat "$CREDENTIALS_DIRECTORY/password")"
     fi
+    ${pkgs.python3}/bin/python3 ${settingsPatchScript}
     exec ${hermes-venv-python} ${webui-src}/server.py
   '';
 
@@ -47,6 +71,9 @@ let
       "HERMES_WEBUI_AGENT_DIR=${hermes-agent-src}"
       "HERMES_HOME=/var/lib/hermes/.hermes"
       "HERMES_BASE_HOME=/var/lib/hermes/.hermes"
+      "HERMES_KANBAN_HOME=/var/lib/hermes/.hermes"
+      "HERMES_KANBAN_DB=/var/lib/hermes/.hermes/kanban.db"
+      "HERMES_KANBAN_WORKSPACES_ROOT=/var/lib/hermes/.hermes/kanban/workspaces"
       "PYTHONPATH=${python-path}"
     ]
     + "\n"

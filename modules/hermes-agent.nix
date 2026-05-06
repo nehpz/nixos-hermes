@@ -11,7 +11,7 @@
 
     # Seeds auth.json on first activation only.
     # Runtime token refreshes survive all subsequent rebuilds.
-    # Active provider is nous (MiniMax M2.7 via Nous inference API).
+    # Active provider is OpenAI Codex via the Responses API.
     authFile = config.sops.secrets.auth_json.path;
     authFileForceOverwrite = false;
 
@@ -56,10 +56,10 @@
 
     settings = {
       model = {
-        # Nous inference API for MiniMax M2.7.
-        base_url = "https://inference-api.nousresearch.com/v1";
-        default = "minimax/minimax-m2.7";
-        provider = "nous";
+        # OpenAI Codex provider uses the Responses API endpoint.
+        base_url = "https://api.openai.com/v1/responses";
+        default = "gpt-5.5";
+        provider = "openai-codex";
       };
 
       # Automatic provider failover on rate limits, overload, or connection
