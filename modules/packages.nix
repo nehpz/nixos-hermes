@@ -43,7 +43,6 @@ in
     pkg:
     builtins.elem (lib.getName pkg) [
       "claude-code"
-      "but"
     ];
 
   nixpkgs.overlays = [

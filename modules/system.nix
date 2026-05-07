@@ -36,7 +36,6 @@
     ripgrep
     unzip
     gh
-    llm-agents.but
     uv # Python package manager — required for hindsight-embed setup
   ];
 
