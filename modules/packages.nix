@@ -64,31 +64,40 @@ in
           let
             patchButSource = ''
               ${pkgs.python3}/bin/python3 - <<'PY'
-              import re
+              import tomllib
               from pathlib import Path
 
               cargo_toml = Path("crates/gitbutler-git/Cargo.toml")
               cargo_toml_text = cargo_toml.read_text()
+              def find_file_id_dependencies(value):
+                  if isinstance(value, dict):
+                      if "file-id" in value:
+                          yield value["file-id"]
+                      for child in value.values():
+                          yield from find_file_id_dependencies(child)
 
-              def normalize_file_id_dependency(match):
-                  inline_table = match.group(1)
-                  fields = dict(
-                      re.findall(r'''([A-Za-z0-9_-]+)\s*=\s*["']([^"']+)["']''', inline_table)
-                  )
-                  if fields == {
+              file_id_dependencies = list(find_file_id_dependencies(tomllib.loads(cargo_toml_text)))
+              if file_id_dependencies != [
+                  {
                       "git": "https://github.com/notify-rs/notify",
                       "rev": "978fe719b066a8ce76b9a9d346546b1569eecfb6",
                       "version": "0.2.3",
-                  }:
-                      return 'file-id = "0.2.3"'
-                  return match.group(0)
+                  }
+              ]:
+                  raise RuntimeError(f"unexpected file-id dependencies: {file_id_dependencies!r}")
 
-              cargo_toml_text, replacement_count = re.subn(
-                  r'''file-id\s*=\s*\{([^}]+)\}''',
-                  normalize_file_id_dependency,
-                  cargo_toml_text,
-                  count=1,
-              )
+              lines = cargo_toml_text.splitlines(keepends=True)
+              replacement_count = 0
+              for index, line in enumerate(lines):
+                  if line.lstrip().startswith("file-id ="):
+                      if replacement_count:
+                          raise RuntimeError("found multiple file-id dependency lines")
+                      indent = line[: len(line) - len(line.lstrip())]
+                      newline = "\n" if line.endswith("\n") else ""
+                      lines[index] = f'{indent}file-id = "0.2.3"{newline}'
+                      replacement_count += 1
+
+              cargo_toml_text = "".join(lines)
               if replacement_count != 1 or "https://github.com/notify-rs/notify" in cargo_toml_text:
                   raise RuntimeError("failed to normalize file-id dependency in Cargo.toml")
               cargo_toml.write_text(cargo_toml_text)
@@ -130,13 +139,7 @@ in
                       continue
                   kept.append('[[package]]\n' + block)
 
-              normalized_lock = "".join(kept)
-              for (name, version, git_source), registry_source in git_sources_to_normalize.items():
-                  normalized_lock = normalized_lock.replace(
-                      f' "{name} {version} ({git_source.split("#", 1)[0]})",',
-                      f' "{name} {version} ({registry_source})",',
-                  )
-              lock.write_text(normalized_lock)
+              lock.write_text("".join(kept))
               PY
             '';
             patchedSrc = pkgs.runCommand "gitbutler-${oldAttrs.version}-but-patched-source" { } ''
