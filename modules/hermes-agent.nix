@@ -67,6 +67,7 @@
       # Nous inference token expiry or refresh failures.
       fallback_model = {
         provider = "openrouter";
+        base_url = "https://openrouter.ai/api/v1";
         model = "openai/gpt-5.5";
       };
 

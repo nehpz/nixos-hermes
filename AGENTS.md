@@ -18,6 +18,7 @@ nixos-hermes/
 ├── flake.nix                            # flake inputs/outputs, host definition
 ├── .github/workflows/flakehub-publish-rolling.yml # CI: publish to FlakeHub on push to main
 ├── .sops.yaml                           # sops encryption policy (age)
+├── .agents/                             # committed local agent skills (GitButler workflow)
 ├── .secrets/                            # GITIGNORED — plaintext secrets, local only
 │   └── hermes-secrets.yaml              # never commit; encrypt before use
 ├── hosts/
@@ -83,6 +84,23 @@ nixos-hermes/
 - The repo is **public**. Never commit SSH private keys, age private keys, plaintext secrets, IP-to-identity mappings, or personal information.
 - The public SSH authorized keys already in the repo are acceptable (by design).
 - Commit messages: imperative mood, present tense, ≤72 chars subject line.
+
+### GitButler Workflow
+
+This workspace is configured for GitButler. The local agent skill lives at
+`.agents/skills/gitbutler/`; read `.agents/skills/gitbutler/SKILL.md` before
+any version-control write operation.
+
+- Use `but` for version-control mutations (`but status -fv`, `but commit`,
+  `but branch new`, `but amend`, `but absorb`, `but push`, `but pr new`).
+- Read-only `git` inspection is still fine. Do not use `git add`, `git commit`,
+  `git checkout`, `git merge`, `git rebase`, `git stash`, or `git push` here.
+- The same approval boundary applies to `but push`: never push autonomously.
+- GitButler wraps the pre-commit hook and preserves the original hook as
+  `.git/hooks/pre-commit-user`, so normal Nix/gitleaks/formatting hooks still
+  run while direct commits to `gitbutler/workspace` are blocked.
+
+See `docs/guides/GITBUTLER_WORKFLOW.md` for the full workflow and hook notes.
 
 ### Testing Ladder
 

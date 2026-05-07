@@ -1,7 +1,7 @@
 # tests/default.nix — NixOS VM test suite
 #
 # Run individual tests with:
-#   nix build .#checks.x86_64-linux.activation-git-credentials
+#   nix build .#checks.x86_64-linux.activation-github-auth
 #
 # These tests require QEMU — they run unprivileged via nixosTest.
 # Consult the testing ladder in AGENTS.md to decide which tool is
@@ -53,7 +53,7 @@ let
       };
 
       # Minimal hermes-agent config — enough to run hermes-agent-setup
-      # and hermes-git-credentials activation scripts.
+      # and hermes-github-auth activation scripts.
       services.hermes-agent = {
         enable = true;
         # Suppress missing required options with stub values
@@ -77,10 +77,10 @@ let
 
 in
 {
-  # Test: hermes-git-credentials activation script
-  # Verifies the script correctly writes ~/.git-credentials from sops secret.
-  activation-git-credentials = pkgs.testers.runNixOSTest {
-    name = "activation-git-credentials";
+  # Test: hermes-github-auth activation script
+  # Verifies the script correctly writes git and gh credentials from sops secret.
+  activation-github-auth = pkgs.testers.runNixOSTest {
+    name = "activation-github-auth";
 
     nodes.machine =
       { ... }:
@@ -111,6 +111,33 @@ in
       machine.succeed(
           "grep -qF 'https://yui-hermes:TEST_TOKEN_WITH_EQUALS_AAA1234567890==suffix@github.com'"
           " /var/lib/hermes/.git-credentials"
+      )
+
+      # gh config must exist with private permissions and be readable by gh.
+      machine.succeed("test -f /var/lib/hermes/.config/gh/hosts.yml")
+      machine.succeed("stat -c%a /var/lib/hermes/.config/gh | grep -qx 700")
+      machine.succeed(
+          "stat -c%a /var/lib/hermes/.config/gh/hosts.yml | grep -qx 600"
+      )
+      machine.succeed(
+          "stat -c%U /var/lib/hermes/.config/gh/hosts.yml | grep -qx hermes"
+      )
+      machine.succeed("test -f /var/lib/hermes/.config/gh/config.yml")
+      machine.succeed(
+          "stat -c%a /var/lib/hermes/.config/gh/config.yml | grep -qx 600"
+      )
+      machine.succeed(
+          "stat -c%U /var/lib/hermes/.config/gh/config.yml | grep -qx hermes"
+      )
+      machine.succeed(
+          "grep -qF 'user: yui-hermes' /var/lib/hermes/.config/gh/hosts.yml"
+      )
+      machine.succeed(
+          "grep -qF 'git_protocol: https' /var/lib/hermes/.config/gh/hosts.yml"
+      )
+      machine.succeed(
+          "runuser -u hermes -- sh -c 'HOME=/var/lib/hermes ${pkgs.gh}/bin/gh auth token'"
+          " | grep -qx 'TEST_TOKEN_WITH_EQUALS_AAA1234567890==suffix'"
       )
     '';
   };

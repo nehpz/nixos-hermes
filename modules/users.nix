@@ -10,6 +10,9 @@
   users.users.admin = {
     isNormalUser = true;
     description = "System Admin";
+    home = "/home/admin";
+    createHome = true;
+    homeMode = "700";
     extraGroups = [
       "wheel"
       "networkmanager"
@@ -33,4 +36,10 @@
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID0inarJ3Em+01Y22ahDmJkbhevhwuFFrWyIEl0CjkzE"
     ];
   };
+
+  # Keep the operator checkout location explicit because mutable users means
+  # ad-hoc home-directory state should not be part of the host contract.
+  systemd.tmpfiles.rules = [
+    "d /home/admin/workspace 0755 admin users - -"
+  ];
 }
