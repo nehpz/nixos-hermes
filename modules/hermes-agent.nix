@@ -80,8 +80,25 @@
       };
 
       # Capabilities the agent may invoke.
-      toolsets = [
-        "hermes-cli" # Full toolset — all 36 tools including clarify. The default for interactive CLI sessions
+      # Use per-platform toolsets so CLI keeps search/browser/terminal/file/etc.
+      # without inheriting the web toolset's LLM summarization path.
+      platform_toolsets.cli = [
+        "search"
+        "browser"
+        "terminal"
+        "file"
+        "code_execution"
+        "vision"
+        "image_gen"
+        "tts"
+        "skills"
+        "todo"
+        "memory"
+        "session_search"
+        "clarify"
+        "delegation"
+        "cronjob"
+        "messaging"
       ];
 
       tts = {
