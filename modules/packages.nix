@@ -64,15 +64,34 @@ in
           let
             patchButSource = ''
               ${pkgs.python3}/bin/python3 - <<'PY'
+              import re
               from pathlib import Path
 
               cargo_toml = Path("crates/gitbutler-git/Cargo.toml")
-              cargo_toml.write_text(
-                  cargo_toml.read_text().replace(
-                      'file-id = { git = "https://github.com/notify-rs/notify", rev = "978fe719b066a8ce76b9a9d346546b1569eecfb6", version = "0.2.3" }',
-                      'file-id = "0.2.3"',
+              cargo_toml_text = cargo_toml.read_text()
+
+              def normalize_file_id_dependency(match):
+                  inline_table = match.group(1)
+                  fields = dict(
+                      re.findall(r'''([A-Za-z0-9_-]+)\s*=\s*["']([^"']+)["']''', inline_table)
                   )
+                  if fields == {
+                      "git": "https://github.com/notify-rs/notify",
+                      "rev": "978fe719b066a8ce76b9a9d346546b1569eecfb6",
+                      "version": "0.2.3",
+                  }:
+                      return 'file-id = "0.2.3"'
+                  return match.group(0)
+
+              cargo_toml_text, replacement_count = re.subn(
+                  r'''file-id\s*=\s*\{([^}]+)\}''',
+                  normalize_file_id_dependency,
+                  cargo_toml_text,
+                  count=1,
               )
+              if replacement_count != 1 or "https://github.com/notify-rs/notify" in cargo_toml_text:
+                  raise RuntimeError("failed to normalize file-id dependency in Cargo.toml")
+              cargo_toml.write_text(cargo_toml_text)
 
               lock = Path("Cargo.lock")
               text = lock.read_text()
@@ -99,12 +118,6 @@ in
                   if source.startswith('git+') and (name, version) in registry_sources
               }
 
-              for (name, version, git_source), registry_source in git_sources_to_normalize.items():
-                  text = text.replace(
-                      f' "{name} {version} ({git_source.split("#", 1)[0]})",',
-                      f' "{name} {version} ({registry_source})",',
-                  )
-
               kept = [blocks[0]]
               for block in blocks[1:]:
                   fields = {}
@@ -116,7 +129,14 @@ in
                   if identity in git_sources_to_normalize:
                       continue
                   kept.append('[[package]]\n' + block)
-              lock.write_text("".join(kept))
+
+              normalized_lock = "".join(kept)
+              for (name, version, git_source), registry_source in git_sources_to_normalize.items():
+                  normalized_lock = normalized_lock.replace(
+                      f' "{name} {version} ({git_source.split("#", 1)[0]})",',
+                      f' "{name} {version} ({registry_source})",',
+                  )
+              lock.write_text(normalized_lock)
               PY
             '';
             patchedSrc = pkgs.runCommand "gitbutler-${oldAttrs.version}-but-patched-source" { } ''
