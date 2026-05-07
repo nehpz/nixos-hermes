@@ -153,7 +153,7 @@
           # Run with: nix build .#checks.x86_64-linux.<name>
           # See AGENTS.md for the testing ladder — use VM tests only for
           # activation script changes.
-          inherit (vmTests) activation-git-credentials;
+          inherit (vmTests) activation-github-auth;
         }
       );
 
