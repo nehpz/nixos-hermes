@@ -115,23 +115,25 @@ Nix wiring:
 
 Why it is a good first plugin: it is small, packaged, fail-open, and does not add tools or alter tool schemas. It intercepts the existing terminal tool through `pre_tool_call`, asks `rtk rewrite` for a lower-context equivalent, and lets RTK filter command output.
 
-## Recommendation: code intelligence plugin
+## Follow-up pilot: code intelligence plugin
 
 Candidate: <https://github.com/rewasa/hermes-code-intel-plugin>
 
-My recommendation: **pilot it next, but do not bundle it into the same PR as `rtk-rewrite`.** It is strategically the right direction — AST/LSP-aware navigation should beat regex search and raw file reads for coding sessions — but it is materially riskier than `rtk-hermes`:
+`code_intel` is deliberately landing as a **Python-first MVP** on a separate stacked branch from `rtk-rewrite`. It is strategically the right direction — AST/LSP-aware navigation should beat regex search and raw file reads for coding sessions — but it is materially riskier than `rtk-hermes`, so the pilot keeps variables tight:
 
-- It is a directory plugin, not a packaged entry-point plugin.
-- It registers 19 tools, changes tool-selection behavior, and can affect prompt/tool schema size.
-- It has Python dependencies (`tree-sitter`, `tree-sitter-languages`, `ast-grep-py`) plus optional LSP binaries (`pyright`, `typescript-language-server`, `rust-analyzer`, `gopls`).
-- `ast-grep-py` is not obviously packaged in nixpkgs under that exact name, so we may need to package it or adjust the plugin to use the `ast-grep` CLI.
+- Directory plugin source is wired through `extraPlugins`.
+- Python dependencies are limited to the grammars already available in the pinned Hermes Python package set: Python, JavaScript, and Rust.
+- Runtime binaries are limited to `ast-grep`, `pyrefly`, and `rust-analyzer`. Pyrefly is preferred over Pyright for the MVP because Pyright's smoke tests worked but it inferred Python 3.13 while Hermes 0.12.0 runs on Python 3.12.
+- TypeScript, Go, and Java grammar support are intentionally deferred; their PyPI sdists currently expect `tree_sitter/parser.h`, which the pinned Nix tree-sitter package does not expose.
+- The upstream plugin's broad prompt/toolset steering is patched out for the MVP. It exposes the explicit `code_intel` toolset, but does not force itself into core toolsets, every subagent, builtin tool descriptions, or every coding prompt.
 
-I would add it in a dedicated follow-up with a narrow acceptance test:
+Acceptance test for the pilot:
 
-1. Package/symlink the plugin through `extraPlugins`.
-2. Add only the minimum Python deps required for AST symbol extraction.
-3. Enable `code_intel` for CLI first, not every gateway platform.
-4. Verify `code_symbols` on a Python and NixOS repo file.
-5. Only then add LSP servers and broader platform/delegation defaults.
+1. Build the full NixOS toplevel closure.
+2. Verify plugin registration exposes the `code_intel` toolset and `code_symbols` without mutating `_HERMES_CORE_TOOLS`.
+3. Verify `code_symbols_tool()` on real Python code from the built Hermes/plugin runtime.
+4. Only after that known-good Python path lands, add TypeScript grammar/LSP support in a separate follow-up commit.
 
 That gives us a clean rollback boundary if its hooks or toolset injection are noisy.
+
+Durable follow-up plan: see [`docs/roadmaps/CODE_INTEL_ROADMAP.md`](../roadmaps/CODE_INTEL_ROADMAP.md) for the language expansion roadmap, Linear migration notes, and lessons learned from the Pyrefly/Pyright spike.
