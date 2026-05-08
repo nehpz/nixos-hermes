@@ -80,11 +80,12 @@ nixos-hermes/
 
 ### Git Hygiene
 
-> **Never `git push` autonomously.** Commit is the limit of unsupervised git action. Always stop after `git commit` and wait for explicit instruction to push.
+> **Push is not the approval gate; PR creation is.** Push focused, non-PR feature branches for remote visibility unless explicitly told not to. Do not open PRs, request reviews, merge, or push churn onto existing PR branches without explicit intent.
 
 - The repo is **public**. Never commit SSH private keys, age private keys, plaintext secrets, IP-to-identity mappings, or personal information.
 - The public SSH authorized keys already in the repo are acceptable (by design).
 - Commit messages: imperative mood, present tense, ≤72 chars subject line.
+- Before opening a PR, curate the GitButler stack into atomic, pickable commits. Once a PR exists, batch follow-up fixes because each push may trigger CI/review automation.
 
 ### GitButler Workflow
 
@@ -96,7 +97,9 @@ any version-control write operation.
   `but branch new`, `but amend`, `but absorb`, `but push`, `but pr new`).
 - Read-only `git` inspection is still fine. Do not use `git add`, `git commit`,
   `git checkout`, `git merge`, `git rebase`, `git stash`, or `git push` here.
-- The same approval boundary applies to `but push`: never push autonomously.
+- Push non-PR GitButler branches with `but push` for remote visibility unless
+  explicitly told not to. PR creation (`but pr new`), review requests, merge,
+  and push churn on already-open PR branches remain explicit approval boundaries.
 - GitButler wraps the pre-commit hook and preserves the original hook as
   `.git/hooks/pre-commit-user`, so normal Nix/gitleaks/formatting hooks still
   run while direct commits to `gitbutler/workspace` are blocked.
