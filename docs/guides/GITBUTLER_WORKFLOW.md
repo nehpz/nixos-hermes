@@ -65,7 +65,20 @@ When an agent works in this repository:
 4. Use IDs from `but status -fv`, `but diff`, or `but show`. Do not invent IDs.
 5. Always include `--status-after` on mutating `but` commands when the command supports it.
 6. Read-only `git` inspection is still fine (`git log`, `git show`, `git diff --stat`, etc.). Avoid `git add`, `git commit`, `git checkout`, `git merge`, `git rebase`, `git stash`, and `git push` in this workspace.
-7. The repository rule still stands: never push autonomously. `but push` is subject to the same approval boundary as `git push`.
+7. Push focused non-PR branches with `but push` for remote visibility unless explicitly told not to.
+8. PR creation is the approval gate: do not run `but pr new`, request reviews, merge, or churn pushes on existing PR branches without explicit intent.
+9. Before opening a PR, curate the GitButler stack into small, atomic, pickable commits.
+
+## Pre-PR visibility workflow
+
+For this user's repositories, pushed feature branches are how headless/remote work becomes inspectable before PR automation starts. Prefer this sequence:
+
+1. Create or select a focused GitButler branch.
+2. Commit small atomic chunks.
+3. Push the branch before PR creation and provide the compare URL.
+4. Continue pushing while no PR exists if more visibility is useful.
+5. Open a PR only when asked or when the task explicitly includes PR creation.
+6. Once a PR exists, batch follow-up fixes because every push may trigger CI/review automation.
 
 ## Pre-commit hooks
 
