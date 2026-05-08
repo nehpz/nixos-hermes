@@ -115,23 +115,21 @@ Nix wiring:
 
 Why it is a good first plugin: it is small, packaged, fail-open, and does not add tools or alter tool schemas. It intercepts the existing terminal tool through `pre_tool_call`, asks `rtk rewrite` for a lower-context equivalent, and lets RTK filter command output.
 
-## Recommendation: code intelligence plugin
+### `code_intel`
 
-Candidate: <https://github.com/rewasa/hermes-code-intel-plugin>
+Source: <https://github.com/rewasa/hermes-code-intel-plugin>
 
-My recommendation: **pilot it next, but do not bundle it into the same PR as `rtk-rewrite`.** It is strategically the right direction — AST/LSP-aware navigation should beat regex search and raw file reads for coding sessions — but it is materially riskier than `rtk-hermes`:
+Shape: directory plugin plus Python grammar dependencies and runtime binaries.
 
-- It is a directory plugin, not a packaged entry-point plugin.
-- It registers 19 tools, changes tool-selection behavior, and can affect prompt/tool schema size.
-- It has Python dependencies (`tree-sitter`, `tree-sitter-languages`, `ast-grep-py`) plus optional LSP binaries (`pyright`, `typescript-language-server`, `rust-analyzer`, `gopls`).
-- `ast-grep-py` is not obviously packaged in nixpkgs under that exact name, so we may need to package it or adjust the plugin to use the `ast-grep` CLI.
+Nix wiring:
 
-I would add it in a dedicated follow-up with a narrow acceptance test:
+- `extraPlugins`: pinned upstream plugin source.
+- `extraPythonPackages`: `ast-grep-py`, `tree-sitter`, and the tree-sitter grammar packages upstream imports eagerly.
+- `extraPackages`: `ast-grep`, `pyrefly`, and `typescript-language-server` on the Hermes service PATH.
+- `settings.plugins.enabled`: `code_intel`.
 
-1. Package/symlink the plugin through `extraPlugins`.
-2. Add only the minimum Python deps required for AST symbol extraction.
-3. Enable `code_intel` for CLI first, not every gateway platform.
-4. Verify `code_symbols` on a Python and NixOS repo file.
-5. Only then add LSP servers and broader platform/delegation defaults.
+This deployment intentionally keeps upstream behavior intact. The plugin registers its toolset, hooks, tool-schema steering, and delegation integration as upstream designed. That is a broader runtime change than `rtk-rewrite`, but it is cleaner and more reversible than carrying a local fork-shaped patch. If the hooks are noisy, roll back the generation or disable `code_intel` in Nix.
 
-That gives us a clean rollback boundary if its hooks or toolset injection are noisy.
+The only source behavior change is Python LSP selection: Pyright is replaced with Pyrefly because Pyright inferred Python 3.13 in this environment while Hermes 0.12.0 runs Python 3.12. Pyrefly was validated live for definition/reference lookups and clean process teardown.
+
+Durable follow-up plan: see [`docs/roadmaps/CODE_INTEL_ROADMAP.md`](../roadmaps/CODE_INTEL_ROADMAP.md).
