@@ -10,7 +10,6 @@
     ../../modules/packages.nix
     ../../modules/hermes-agent.nix
     ../../modules/hermes-plugins.nix
-    ../../modules/hermes-webui.nix
     ../../modules/users.nix
   ];
 

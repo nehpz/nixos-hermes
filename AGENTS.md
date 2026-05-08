@@ -33,7 +33,6 @@ nixos-hermes/
 │   ├── system.nix                       # locale, tz, networking, packages, sudo
 │   ├── hermes-agent.nix                 # hermes service declaration
 │   ├── hermes-plugins.nix               # declarative Hermes plugin packages/enables
-│   ├── hermes-webui.nix                 # hermes web UI service declaration
 │   ├── packages.nix                     # nixpkgs overlays (llm-agents.nix + local workarounds)
 │   └── users.nix                        # immutable user + SSH key declarations
 ```
@@ -248,15 +247,6 @@ After first install:
 - Plugin runtime binaries belong in `services.hermes-agent.extraPackages`.
 - Plugin names must also be enabled in `services.hermes-agent.settings.plugins.enabled`.
 - See `docs/guides/HERMES_PLUGINS_NIX.md` before adding or updating plugins.
-
-### `modules/hermes-webui.nix`
-
-*The `hermes-webui` service declaration.*
-
-- Owns all `services.hermes-webui.*` options and systemd unit settings.
-- Self-enables for the single-host deployment, matching the `hermes-agent` module pattern.
-- References the `hermes-webui` password by name from the `sops` bindings.
-- Binds to loopback only; do not open a firewall port unless explicitly requested.
 
 ### `modules/users.nix`
 

@@ -27,12 +27,6 @@
       mode = "0400";
     };
 
-    # Single shared password for hermes-webui authentication.
-    "hermes-webui" = {
-      owner = "hermes";
-      mode = "0400";
-    };
-
     # OAuth bootstrap credentials for hermes-agent providers.
     # authFileForceOverwrite = false (default) means these seed auth.json on
     # first activation only; runtime token refreshes are never overwritten.
