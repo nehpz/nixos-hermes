@@ -16,6 +16,8 @@ Use GitButler CLI (`but`) as the default version-control interface.
 3. Use CLI IDs from `but status -fv` / `but diff` / `but show`; never hardcode IDs.
 4. Start with `but status -fv` before mutations so IDs and stack state are current.
 5. Create a branch for new work with `but branch new <name>` when needed.
+6. For history optimization, **do not rebuild state with `git diff` + `git apply`**. Use GitButler primitives (`but rub`, `but squash`, `but move`, `but reword`, `but uncommit`) to reshape commits and branches. If you think native git is required, stop and explain the exact GitButler limitation before doing it.
+7. There is no production-pressure excuse for bypassing GitButler. If the right command is unfamiliar, explore the local skill/reference or `but --help` after checking the reference, then use the GitButler-native operation.
 
 ## Core Flow
 
@@ -64,6 +66,24 @@ but <mutation> ... --status-after
 1. `but status -fv` (or `but show <branch-id>`)
 2. Locate file ID and target commit ID.
 3. `but amend <file-id> <commit-id> --status-after`
+
+### Optimize a messy branch before PR
+
+Use GitButler as the commit-composition tool. Do **not** export a patch and apply it to a new branch unless GitButler cannot represent the operation and you have said why.
+
+1. Inspect the stack with `but status -fv` and `but show <branch-id>` / `but branch show <branch-name> -f`.
+2. Decide the target atomic commits: which files/hunks belong together and in what order.
+3. Use `but rub` for moving material:
+   - `but rub <file-id> <commit-id> --status-after` — amend a file/hunk into the right commit.
+   - `but rub <file-in-commit-id> <commit-id> --status-after` — move a committed file from one commit to another.
+   - `but rub <commit-id> <commit-id> --status-after` — squash one commit into another when they are the same logical change.
+   - `but rub <commit-id> zz --status-after` — uncommit a bad commit to unassigned changes, then recommit selected files/hunks.
+4. Use `but squash <commits> -m "message" --status-after` for straightforward collapse.
+5. Use `but move <commit-id> <target-commit-id> --status-after` for ordering, and `but reword <commit-id> -m "message"` for message cleanup.
+6. Re-run `but status -fv` after each mutation because CLI IDs can change.
+7. Validate, then `but push <branch>`.
+
+If a clean replacement branch is still warranted, prefer GitButler-native reconstruction: create the branch with `but branch new`, then use file tools to edit the working tree and `but commit --changes ...`. Avoid `git apply`; patch replay hides whether you understood the GitButler object model.
 
 ### Reorder commits
 
@@ -157,6 +177,7 @@ If `but move` causes conflicts (conflicted commits in status):
 - **Per-commit file counts**: `but status` does NOT include per-commit file counts. Use `but show <branch-id>` or `git show --stat <commit-hash>` to get them.
 - Avoid `--help` probes; use this skill and `references/reference.md` first. Only use `--help` after a failed attempt.
 - Run `but skill check` only when command behavior diverges from this skill, not as routine preflight.
+- Edge case: `but branch delete <name>` can fail to remove an unapplied/stale branch with `not found in any stack`, and after applying it can refuse with `would leave an anonymous segment`. First try GitButler-native cleanup (`but apply`, `but unapply`, `but uncommit --discard` as appropriate). If GitButler still cannot delete the branch and the intent is only stale branch cleanup, state the limitation, then use the narrow native fallback: delete the local branch/ref and any stale remote-tracking ref (`git branch -D <name>`, `git branch -dr origin/<name>`). Do not use this fallback for history reshaping.
 - For command syntax and flags: `references/reference.md`
 - For workspace model: `references/concepts.md`
 - For workflow examples: `references/examples.md`
