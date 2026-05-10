@@ -21,6 +21,8 @@
     # ripgrep: fast search used by file and terminal toolsets.
     # libopus: pins the store path referenced by the opus ctypes shim (see modules/packages.nix).
     # claude-code, codex: AI coding agents — nixpkgs provides both as of May 2026.
+    # bun: JavaScript runtime, package manager, and build tool.
+    # fh: official FlakeHub CLI for flake input discovery and conversion.
     # omp: terminal-based multi-model coding agent from numtide/llm-agents.nix overlay.
     # agent-browser: headless browser automation CLI from llm-agents.nix (built from source, auto-updated daily).
     extraPackages = with pkgs; [
@@ -30,6 +32,8 @@
       libopus
       claude-code
       codex
+      bun
+      fh
       pkgs.llm-agents.omp
       pkgs.llm-agents.agent-browser
       mcp-nixos
