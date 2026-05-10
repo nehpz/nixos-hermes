@@ -19,7 +19,8 @@
       path = "/etc/ssh/ssh_host_ed25519_key";
     };
 
-    # Combined env file for hermes-agent: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN, etc.
+    # Combined env file for hermes-agent: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN,
+    # OPENROUTER_API_KEY, LINEAR_API_KEY, etc.
     # Value is a newline-delimited KEY=value file; merged into $HERMES_HOME/.env
     # at activation time by the hermes-agent module.
     "hermes-env" = {
