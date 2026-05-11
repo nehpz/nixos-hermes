@@ -154,6 +154,38 @@
           # See AGENTS.md for the testing ladder — use VM tests only for
           # activation script changes.
           inherit (vmTests) activation-github-auth;
+
+          hindsight-service-config =
+            let
+              hostConfig = self.nixosConfigurations.nixos-hermes.config;
+              hindsightUnit = hostConfig.systemd.services.hindsight-embed;
+              hindsightInitUnit = hostConfig.systemd.services.hindsight-postgres-init;
+              llamaUnit = hostConfig.systemd.services.llama-server;
+              envFile = builtins.head (pkgs.lib.toList hindsightUnit.serviceConfig.EnvironmentFile);
+              llamaExec = llamaUnit.serviceConfig.ExecStart;
+              pgInitExec = hindsightInitUnit.serviceConfig.ExecStart;
+            in
+            pkgs.runCommand "hindsight-service-config" { } ''
+              set -eu
+
+              grep -qx 'HINDSIGHT_API_EMBEDDINGS_PROVIDER=openai' ${envFile}
+              grep -qx 'HINDSIGHT_API_RERANKER_PROVIDER=rrf' ${envFile}
+              grep -qx 'HINDSIGHT_API_DATABASE_URL=postgresql:///hermes?host=/run/postgresql' ${envFile}
+              grep -q -- 'CREATE EXTENSION IF NOT EXISTS vector' <<'EOF'
+              ${pgInitExec}
+              EOF
+              grep -q -- '--embeddings' <<'EOF'
+              ${llamaExec}
+              EOF
+              grep -q -- '--pooling' <<'EOF'
+              ${llamaExec}
+              EOF
+              grep -q -- 'mean' <<'EOF'
+              ${llamaExec}
+              EOF
+
+              touch $out
+            '';
         }
       );
 

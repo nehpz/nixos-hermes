@@ -9,6 +9,7 @@
     ./virtualisation.nix
     ./llama-server.nix
     ./hindsight-embed.nix
+    ./hindsight-memory.nix
     ../../modules/system.nix
     ../../modules/packages.nix
     ../../modules/hermes-agent.nix
