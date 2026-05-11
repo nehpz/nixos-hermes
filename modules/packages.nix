@@ -54,6 +54,36 @@ in
       # Exposed via overlay so consumers (hermes-agent.nix) can reference
       # pkgs.opusCtypesShim without packages.nix coupling to any service.
       inherit opusCtypesShim;
+
+      linear-cli = prev.buildGoModule rec {
+        pname = "linear-cli";
+        version = "1.8.1";
+
+        src = prev.fetchFromGitHub {
+          owner = "joa23";
+          repo = "linear-cli";
+          rev = "v${version}";
+          hash = "sha256-7Yk/UzbZ5P7awctHwFNVUMEgFN3fUATqHZZm9RdSLfE=";
+        };
+
+        vendorHash = "sha256-Ype8lW/3wbIbbFhPMwXEnm+9tEMPYMqPIxg8ykeK8v0=";
+
+        subPackages = [ "cmd/linear" ];
+        env.CGO_ENABLED = 0;
+        ldflags = [ "-X github.com/joa23/linear-cli/internal/cli.Version=v${version}" ];
+        preCheck = ''
+          unset LINEAR_API_KEY
+        '';
+
+        meta = {
+          description = "Token-efficient Linear CLI optimized for AI agent workflows";
+          homepage = "https://github.com/joa23/linear-cli";
+          license = lib.licenses.mit;
+          mainProgram = "linear";
+          platforms = lib.platforms.linux ++ lib.platforms.darwin;
+        };
+      };
+
       # llama-cpp b6981 (pinned nixpkgs) predates Gemma 4 arch support (requires >= b8637).
       # Override with b8770 from nixpkgs-llama until FlakeHub NixOS/nixpkgs/0 catches up.
       llama-cpp = (nixpkgs-llama.legacyPackages.${pkgs.system}).llama-cpp;

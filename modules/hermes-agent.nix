@@ -16,6 +16,7 @@
     # libopus: pins the store path referenced by the opus ctypes shim (see modules/packages.nix).
     # claude-code, codex: AI coding agents — nixpkgs provides both as of May 2026.
     # bun: JavaScript runtime, package manager, and build tool.
+    # linear-cli: API-key-backed Linear control plane for headless agent workflows.
     # fh: official FlakeHub CLI for flake input discovery and conversion.
     # omp: terminal-based multi-model coding agent from numtide/llm-agents.nix overlay.
     # agent-browser: headless browser automation CLI from llm-agents.nix (built from source, auto-updated daily).
@@ -27,6 +28,7 @@
       claude-code
       codex
       bun
+      linear-cli
       fh
       pkgs.llm-agents.omp
       pkgs.llm-agents.agent-browser
