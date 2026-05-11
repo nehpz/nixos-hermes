@@ -7,6 +7,8 @@
     ./sops.nix
     ./provision.nix
     ./virtualisation.nix
+    ./llama-server.nix
+    ./hindsight-embed.nix
     ../../modules/system.nix
     ../../modules/packages.nix
     ../../modules/hermes-agent.nix
