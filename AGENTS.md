@@ -87,6 +87,21 @@ nixos-hermes/
 - Commit messages: imperative mood, present tense, ≤72 chars subject line.
 - Before opening a PR, curate the GitButler stack into atomic, pickable commits. Once a PR exists, batch follow-up fixes because each push may trigger CI/review automation.
 
+### Linear Agent Workflow
+
+Linear is the durable coordination layer for agent work. Work should start from a scoped Linear issue, use compact branch names like `yui/ONE-29`, and end with an evidence comment containing branch, commit, changed files, validation, and any runtime follow-up.
+
+Use the packaged `linear` CLI for routine agent interactions where possible. It authenticates non-interactively through `LINEAR_API_KEY` from the Hermes secret environment and avoids the headless OAuth problem in Linear's hosted MCP path. Prefer stable JSON output for scripts/reports:
+
+```bash
+linear issues get ONE-29 --output json
+linear issues list --team ONE --output json
+linear issues comment ONE-29 --body "Validation passed: ..."
+linear issues update ONE-29 --state Review
+```
+
+Do not use opaque local Python scripts for normal Linear issue operations; if the CLI lacks coverage, use transparent GraphQL/curl commands and document the gap. Do not enable hosted Linear MCP in the default Hermes startup path until service-user OAuth bootstrap is proven.
+
 ### GitButler Workflow
 
 This workspace is configured for GitButler. The local agent skill lives at
