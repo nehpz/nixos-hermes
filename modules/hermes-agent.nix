@@ -16,6 +16,7 @@
     # libopus: pins the store path referenced by the opus ctypes shim (see modules/packages.nix).
     # claude-code, codex: AI coding agents — nixpkgs provides both as of May 2026.
     # bun: JavaScript runtime, package manager, and build tool.
+    # nodejs: provides npx for stdio MCP adapters such as Linear's mcp-remote bridge.
     # fh: official FlakeHub CLI for flake input discovery and conversion.
     # omp: terminal-based multi-model coding agent from numtide/llm-agents.nix overlay.
     # agent-browser: headless browser automation CLI from llm-agents.nix (built from source, auto-updated daily).
@@ -27,6 +28,7 @@
       claude-code
       codex
       bun
+      nodejs
       fh
       pkgs.llm-agents.omp
       pkgs.llm-agents.agent-browser
@@ -151,6 +153,23 @@
       nixos = {
         command = "${pkgs.mcp-nixos}/bin/mcp-nixos";
         args = [ ];
+      };
+
+      # Linear MCP is intentionally not started by default on this managed,
+      # headless host. Linear's official MCP endpoint uses remote OAuth via
+      # mcp-remote; when unauthenticated it blocks startup/discovery waiting for
+      # a browser callback and can make CLI/gateway sessions appear hung.
+      # Re-enable only after a non-interactive auth path is proven.
+      linear = {
+        enabled = false;
+        command = "${pkgs.nodejs}/bin/npx";
+        args = [
+          "-y"
+          "mcp-remote"
+          "https://mcp.linear.app/mcp"
+        ];
+        connect_timeout = 120;
+        timeout = 120;
       };
     };
   };
