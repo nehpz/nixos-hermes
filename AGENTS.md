@@ -28,6 +28,7 @@ nixos-hermes/
 │       ├── hardware.nix                 # boot, initrd, kernel, GPU, ZFS services (filesystems via disko)
 │       ├── provision.nix                # host-specific activation scripts (one-shot provisioning + recurring refresh)
 │       ├── sops.nix                     # sops-nix secret bindings (host-specific)
+│       ├── virtualisation.nix           # Docker/libvirt host substrate and host-specific group memberships
 │       └── secrets/                     # committed SOPS-encrypted files
 ├── modules/
 │   ├── system.nix                       # locale, tz, networking, packages, sudo
@@ -205,6 +206,15 @@ After first install:
 
 - Lives alongside `secrets/` so that `./secrets/...` paths resolve correctly.
 - The `sops age` key path (`/etc/secrets/age.key`) must not change without updating this file.
+
+### `hosts/hermes/virtualisation.nix`
+
+*Host-local Docker/libvirt substrate.*
+
+- Owns Docker, libvirt/QEMU, virtiofsd registration, and host-specific operator group memberships needed to use those services.
+- Keep Docker/libvirt group memberships here, not in `modules/users.nix`, because those groups only exist on hosts that enable the corresponding services.
+- Docker group access is root-equivalent on this host. Adding `hermes` to `docker` is a deliberate operational trust decision for container-first workload proving, not a sandbox boundary.
+- The Docker ZFS storage driver is for the bare-metal ZFS host only. Guest Docker inside VMs/microVMs should use overlay2 on ext4/xfs to avoid stacked CoW over host ZFS.
 
 ### `hosts/hermes/provision.nix`
 
