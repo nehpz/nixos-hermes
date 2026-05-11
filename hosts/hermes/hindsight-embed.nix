@@ -74,8 +74,8 @@ in
       after = [
         "network.target"
         "postgresql.service"
-        "llama-server.service"
-      ];
+      ]
+      ++ lib.optionals cfg.llama.enable [ "llama-server.service" ];
       requires = [ "postgresql.service" ];
 
       # Environment variables for hindsight-api.
@@ -84,8 +84,8 @@ in
       environment = {
         HINDSIGHT_API_LLM_PROVIDER = "openai";
         HINDSIGHT_API_LLM_API_KEY = "local"; # llama-server requires non-empty but ignores value
-        HINDSIGHT_API_LLM_BASE_URL = "http://127.0.0.1:8080/v1";
-        HINDSIGHT_API_LLM_MODEL = "google_gemma-4-E2B-it-Q6_K_L.gguf";
+        HINDSIGHT_API_LLM_BASE_URL = "http://${cfg.llama.host}:${toString cfg.llama.port}/v1";
+        HINDSIGHT_API_LLM_MODEL = builtins.baseNameOf cfg.llama.modelPath;
         HINDSIGHT_API_DATABASE_URL = "postgresql://hermes@localhost/hermes";
         HINDSIGHT_API_PORT = "8888";
         HINDSIGHT_API_HOST = "127.0.0.1";
