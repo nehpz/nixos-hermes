@@ -9,12 +9,6 @@
     enable = true;
     addToSystemPackages = true;
 
-    # Seeds auth.json on first activation only.
-    # Runtime token refreshes survive all subsequent rebuilds.
-    # Active provider is OpenAI Codex via the Responses API.
-    authFile = config.sops.secrets.auth_json.path;
-    authFileForceOverwrite = false;
-
     # Packages required by enabled toolsets.
     # playwright-driver.browsers: NixOS-wrapped browser binaries for the browser toolset.
     # ffmpeg: audio processing for ElevenLabs TTS voice bubble delivery.

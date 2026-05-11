@@ -28,16 +28,6 @@
       mode = "0400";
     };
 
-    # OAuth bootstrap credentials for hermes-agent providers.
-    # authFileForceOverwrite = false (default) means these seed auth.json on
-    # first activation only; runtime token refreshes are never overwritten.
-    # To re-auth: update tokens here, set authFileForceOverwrite = true, rebuild,
-    # then revert to false.
-    auth_json = {
-      owner = "hermes";
-      mode = "0400";
-    };
-
     # Agent personality — encrypted so contents remain private in the public repo.
     # Decrypted by sops-nix at activation; the hermes-soul-md script provisions
     # it to $HERMES_HOME on first boot only.

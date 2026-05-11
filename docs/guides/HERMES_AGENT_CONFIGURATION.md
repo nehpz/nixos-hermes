@@ -4,20 +4,6 @@ The service runs natively (no container mode) as the `hermes` user. `nixos-rebui
 
 ## Key `options` configuration
 
-### `authFile`
-
-- Bootstrap-only in `Managed` mode; `hermes gateway install` and interactive auth commands are blocked. `authFile` is the only way to seed credentials on first activation
-- `authFileForceOverwrite = false` (the default) means the sops-stored token seeds `auth.json` once and is never applied again; runtime token refreshes made by hermes persist on the ZFS dataset across all future rebuilds
-- The token in `sops` goes stale but is never re-applied — this is intentional
-- Providers can be swapped or run concurrently; each has its own `sops` binding (`anthropic_auth_json`, `codex_auth_json`)
-
-#### Re-auth procedure
-
-1. Replace the plaintext tokens in `.secrets/hermes-secrets.yaml` with fresh tokens
-2. Re-encrypt to `hosts/hermes/secrets/` and confirm the file successfully roundtrips
-3. Set `authFileForceOverwrite = true` in `hermes-agent.nix` and rebuild
-4. Set `authFileForceOverwrite = false` and rebuild again
-
 ### `environmentFiles`
 
 - Points at the `hermes-env` sops secret, a `KEY=value` env file merged into `$HERMES_HOME/.env` at activation
