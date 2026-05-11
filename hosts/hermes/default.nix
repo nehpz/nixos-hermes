@@ -9,6 +9,7 @@
     ./virtualisation.nix
     ./llama-server.nix
     ./hindsight-embed.nix
+    ./hindsight-memory.nix
     ../../modules/system.nix
     ../../modules/packages.nix
     ../../modules/hermes-agent.nix
@@ -21,10 +22,6 @@
   networking.hostName = "nixos-hermes";
   # ZFS hostId ties the pool to this machine; changing it requires pool export/import.
   networking.hostId = "52dd4e5a";
-
-  # Enable only the local inference unit for now. The Hindsight API/PostgreSQL
-  # service is validated separately before wiring Hermes to it.
-  services.hindsightMemory.llama.enable = true;
 
   system.stateVersion = "25.05";
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
