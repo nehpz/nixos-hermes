@@ -19,20 +19,11 @@
       path = "/etc/ssh/ssh_host_ed25519_key";
     };
 
-    # Combined env file for hermes-agent: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN, etc.
+    # Combined env file for hermes-agent: ELEVENLABS_API_KEY, DISCORD_BOT_TOKEN,
+    # OPENROUTER_API_KEY, LINEAR_API_KEY, etc.
     # Value is a newline-delimited KEY=value file; merged into $HERMES_HOME/.env
     # at activation time by the hermes-agent module.
     "hermes-env" = {
-      owner = "hermes";
-      mode = "0400";
-    };
-
-    # OAuth bootstrap credentials for hermes-agent providers.
-    # authFileForceOverwrite = false (default) means these seed auth.json on
-    # first activation only; runtime token refreshes are never overwritten.
-    # To re-auth: update tokens here, set authFileForceOverwrite = true, rebuild,
-    # then revert to false.
-    auth_json = {
       owner = "hermes";
       mode = "0400";
     };
