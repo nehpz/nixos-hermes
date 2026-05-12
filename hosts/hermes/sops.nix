@@ -28,6 +28,16 @@
       mode = "0400";
     };
 
+    # API key for the LAN CLIProxyAPI endpoint used by Hindsight's external
+    # OpenAI-compatible LLM provider. The key is passed as a systemd credential
+    # to hindsight-embed, not written into the Nix store.
+    cliproxyapi-key = {
+      sopsFile = ./secrets/cliproxyapi-key.enc;
+      format = "binary";
+      owner = "hermes";
+      mode = "0400";
+    };
+
     # Agent personality — encrypted so contents remain private in the public repo.
     # Decrypted by sops-nix at activation; the hermes-soul-md script provisions
     # it to $HERMES_HOME on first boot only.

@@ -41,7 +41,7 @@ in
 
     modelPath = lib.mkOption {
       type = types.str;
-      default = "/var/lib/hermes/models/Qwen2.5-7B-Instruct-Q4_K_M.gguf";
+      default = "/var/lib/hermes/models/google_gemma-4-E2B-it-Q6_K_L.gguf";
       description = "Absolute path to the GGUF model served by llama.cpp.";
     };
 
@@ -90,7 +90,7 @@ in
 
     chatTemplate = lib.mkOption {
       type = types.nullOr types.str;
-      default = "chatml";
+      default = null;
       description = "Chat template passed to llama.cpp; set to null to let llama.cpp infer it.";
     };
   };
