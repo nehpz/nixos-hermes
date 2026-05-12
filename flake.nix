@@ -164,6 +164,11 @@
               envFile = builtins.head (pkgs.lib.toList hindsightUnit.serviceConfig.EnvironmentFile);
               llamaExec = llamaUnit.serviceConfig.ExecStart;
               pgInitExec = hindsightInitUnit.serviceConfig.ExecStart;
+              hermesMemory = hostConfig.services.hermes-agent.settings.memory;
+              hermesEnv = hostConfig.services.hermes-agent.environment;
+              hermesAfter = hostConfig.systemd.services.hermes-agent.after;
+              hermesWants = hostConfig.systemd.services.hermes-agent.wants;
+              hindsightActivation = hostConfig.system.activationScripts.hermes-hindsight-config.text;
             in
             pkgs.runCommand "hindsight-service-config" { } ''
               set -eu
@@ -171,6 +176,19 @@
               grep -qx 'HINDSIGHT_API_EMBEDDINGS_PROVIDER=openai' ${envFile}
               grep -qx 'HINDSIGHT_API_RERANKER_PROVIDER=rrf' ${envFile}
               grep -qx 'HINDSIGHT_API_DATABASE_URL=postgresql:///hermes?host=/run/postgresql' ${envFile}
+              test '${hermesMemory.provider}' = 'hindsight'
+              test '${hermesEnv.HINDSIGHT_MODE}' = 'local_external'
+              test '${hermesEnv.HINDSIGHT_API_URL}' = 'http://127.0.0.1:8888'
+              test '${hermesEnv.HINDSIGHT_BANK_ID}' = 'hermes'
+              test '${hermesEnv.HINDSIGHT_BUDGET}' = 'mid'
+              test '${toString (builtins.elem "hindsight-embed.service" hermesAfter)}' = '1'
+              test '${toString (builtins.elem "hindsight-embed.service" hermesWants)}' = '1'
+              grep -q -- 'hermes-hindsight-config.json' <<'EOF'
+              ${hindsightActivation}
+              EOF
+              grep -q -- 'hindsight/config.json' <<'EOF'
+              ${hindsightActivation}
+              EOF
               grep -q -- 'CREATE EXTENSION IF NOT EXISTS vector' <<'EOF'
               ${pgInitExec}
               EOF
