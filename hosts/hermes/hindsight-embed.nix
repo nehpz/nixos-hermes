@@ -15,27 +15,10 @@ let
   hermesEnvPython = "${config.services.hermes-agent.package.passthru.hermesVenv}/bin/python3";
 
   # Writable venv path. Created at service start by ExecStartPre.
-  # Uses --system-site-packages so hermes-agent-env packages are visible, while
-  # the EnvironmentFile below puts the Nix-patched Hermes site-packages first.
-  # That keeps binary packages like numpy/scipy on their NixOS-patchelf builds
-  # even if Hindsight's pip dependency resolver drops wheels into the venv.
   # Shared with the temporary opusCtypesShim in modules/packages.nix so Hermes can
   # import hindsight-client during the spike. This is deliberately host-stateful;
   # ONE-24 should remove the cross-module coupling when the provider wiring is finalized.
   hindsightVenv = "/var/lib/hermes/.venv";
-  hermesVenv = config.services.hermes-agent.package.passthru.hermesVenv;
-  # Discover the Hermes sealed venv's Python minor version from the venv itself.
-  # Do not use pkgs.python3.pythonVersion here: this host's nixpkgs Python is
-  # 3.13 while the locked Hermes venv is currently Python 3.12.
-  hermesPythonDirs = builtins.filter (name: lib.hasPrefix "python" name) (
-    builtins.attrNames (builtins.readDir "${hermesVenv}/lib")
-  );
-  hermesPythonDir =
-    if hermesPythonDirs == [ ] then
-      throw "Hermes venv at ${hermesVenv} has no lib/python* site-packages directory"
-    else
-      builtins.head hermesPythonDirs;
-  hermesSitePackages = "${hermesVenv}/lib/${hermesPythonDir}/site-packages";
 
   serviceEnvFile = pkgs.writeText "hindsight-embed.env" (
     lib.concatStringsSep "\n" [
