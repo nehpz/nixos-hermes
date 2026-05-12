@@ -173,7 +173,13 @@
             pkgs.runCommand "hindsight-service-config" { } ''
               set -eu
 
+              grep -qx 'HINDSIGHT_API_LLM_MODEL=Qwen2.5-7B-Instruct-Q4_K_M.gguf' ${envFile}
+              grep -qx 'HINDSIGHT_API_LLM_TIMEOUT=900' ${envFile}
+              grep -qx 'HINDSIGHT_API_RETAIN_MAX_COMPLETION_TOKENS=4096' ${envFile}
+              grep -qx 'HINDSIGHT_API_RETAIN_EXTRACTION_MODE=custom' ${envFile}
+              grep -q 'top-level "facts" array' ${envFile}
               grep -qx 'HINDSIGHT_API_EMBEDDINGS_PROVIDER=openai' ${envFile}
+              grep -qx 'HINDSIGHT_API_EMBEDDINGS_OPENAI_MODEL=Qwen2.5-7B-Instruct-Q4_K_M.gguf' ${envFile}
               grep -qx 'HINDSIGHT_API_RERANKER_PROVIDER=rrf' ${envFile}
               grep -qx 'HINDSIGHT_API_DATABASE_URL=postgresql:///hermes?host=/run/postgresql' ${envFile}
               test '${hermesMemory.provider}' = 'hindsight'
@@ -199,6 +205,12 @@
               ${llamaExec}
               EOF
               grep -q -- 'mean' <<'EOF'
+              ${llamaExec}
+              EOF
+              grep -q -- '--chat-template' <<'EOF'
+              ${llamaExec}
+              EOF
+              grep -q -- 'chatml' <<'EOF'
               ${llamaExec}
               EOF
 

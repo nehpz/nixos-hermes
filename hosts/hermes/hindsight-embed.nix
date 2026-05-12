@@ -43,6 +43,13 @@ let
       "HINDSIGHT_API_LLM_API_KEY=local"
       "HINDSIGHT_API_LLM_BASE_URL=http://${cfg.llama.host}:${toString cfg.llama.port}/v1"
       "HINDSIGHT_API_LLM_MODEL=${builtins.baseNameOf cfg.llama.modelPath}"
+      # Local CPU llama.cpp is slow on Hindsight's schema-heavy extraction prompt.
+      # Keep completion limits realistic and use a stricter custom prompt that
+      # Qwen follows reliably as a top-level { facts = [...] } object.
+      "HINDSIGHT_API_LLM_TIMEOUT=900"
+      "HINDSIGHT_API_RETAIN_MAX_COMPLETION_TOKENS=4096"
+      "HINDSIGHT_API_RETAIN_EXTRACTION_MODE=custom"
+      ''HINDSIGHT_API_RETAIN_CUSTOM_INSTRUCTIONS=Return exactly one JSON object with a top-level "facts" array; never return a bare array. Extract durable personal, preference, role, project, and operational facts. Use fact_type="world" for facts about people, organizations, preferences, roles, projects, tools, or external state. Use fact_type="assistant" only for first-person actions performed by the narrator/assistant. For each fact include what, when, where, who, why, fact_type, fact_kind, and entities.''
       "HINDSIGHT_API_DATABASE_URL=postgresql:///hermes?host=/run/postgresql"
       "HINDSIGHT_API_EMBEDDINGS_PROVIDER=openai"
       "HINDSIGHT_API_EMBEDDINGS_OPENAI_API_KEY=local"
