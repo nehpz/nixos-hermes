@@ -173,7 +173,19 @@
             pkgs.runCommand "hindsight-service-config" { } ''
               set -eu
 
+              grep -qx 'LD_LIBRARY_PATH=.*gcc.*-lib/lib' ${envFile}
+              grep -qx 'HINDSIGHT_API_LLM_PROVIDER=openai' ${envFile}
+              grep -qx 'HINDSIGHT_API_LLM_BASE_URL=http://10.0.0.102:8317/v1' ${envFile}
+              grep -qx 'HINDSIGHT_API_LLM_MODEL=gpt-5.4-mini' ${envFile}
+              grep -qx 'HINDSIGHT_API_LLM_TIMEOUT=120' ${envFile}
+              ! grep -q '^HINDSIGHT_API_LLM_API_KEY=' ${envFile}
+              test '${toString (builtins.elem "cliproxyapi-key:${hostConfig.sops.secrets."cliproxyapi-key".path}" hindsightUnit.serviceConfig.LoadCredential)}' = '1'
+              grep -qx 'HINDSIGHT_API_RETAIN_MAX_COMPLETION_TOKENS=4096' ${envFile}
+              grep -qx 'HINDSIGHT_API_RETAIN_EXTRACTION_MODE=custom' ${envFile}
+              grep -q 'top-level "facts" array' ${envFile}
+              grep -q 'extract only the durable lesson' ${envFile}
               grep -qx 'HINDSIGHT_API_EMBEDDINGS_PROVIDER=openai' ${envFile}
+              grep -qx 'HINDSIGHT_API_EMBEDDINGS_OPENAI_MODEL=google_gemma-4-E2B-it-Q6_K_L.gguf' ${envFile}
               grep -qx 'HINDSIGHT_API_RERANKER_PROVIDER=rrf' ${envFile}
               grep -qx 'HINDSIGHT_API_DATABASE_URL=postgresql:///hermes?host=/run/postgresql' ${envFile}
               test '${hermesMemory.provider}' = 'hindsight'
@@ -199,6 +211,9 @@
               ${llamaExec}
               EOF
               grep -q -- 'mean' <<'EOF'
+              ${llamaExec}
+              EOF
+              ! grep -q -- '--chat-template' <<'EOF'
               ${llamaExec}
               EOF
 

@@ -90,7 +90,7 @@ in
 
     chatTemplate = lib.mkOption {
       type = types.nullOr types.str;
-      default = "gemma";
+      default = null;
       description = "Chat template passed to llama.cpp; set to null to let llama.cpp infer it.";
     };
   };
