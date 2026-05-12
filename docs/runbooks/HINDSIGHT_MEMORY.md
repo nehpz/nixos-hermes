@@ -171,7 +171,7 @@ Fix:
 - Rebuild/switch with the declarative activation refresh, or inspect:
 
 ```bash
-jq . /var/lib/hermes/hindsight/config.json
+jq . /var/lib/hermes/.hermes/hindsight/config.json
 ```
 
 ### Writable venv Python mismatch
