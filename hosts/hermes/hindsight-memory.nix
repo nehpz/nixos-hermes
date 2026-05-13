@@ -18,9 +18,7 @@ let
     bank_id_template = "hermes-{profile}";
     budget = "mid";
   };
-  hindsightConfig = pkgs.writeText "hermes-hindsight-config.json" (
-    builtins.toJSON providerConfig
-  );
+  hindsightConfig = pkgs.writeText "hermes-hindsight-config.json" (builtins.toJSON providerConfig);
 in
 {
   services.hindsightMemory = {
