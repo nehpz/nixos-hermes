@@ -226,15 +226,39 @@
       # pin as the NixOS modules. Invoke with:
       #   nix run .#nixos-anywhere -- --flake .#nixos-hermes ...
       #   nix run .#disko -- --mode disko hosts/hermes/disk-config.nix
-      apps = forDevSystems (system: {
-        nixos-anywhere = {
-          type = "app";
-          program = "${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere";
-        };
-        disko = {
-          type = "app";
-          program = "${disko.packages.${system}.disko}/bin/disko";
-        };
-      });
+      apps = forDevSystems (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          prePrVerify = pkgs.writeShellApplication {
+            name = "pre-pr-verify";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.git
+              pkgs.nix
+              pkgs.nixos-rebuild
+            ];
+            text = ''
+              exec ${pkgs.bash}/bin/bash ${./tools/pre-pr-verify.sh} "$@"
+            '';
+          };
+        in
+        {
+          nixos-anywhere = {
+            type = "app";
+            program = "${nixos-anywhere.packages.${system}.nixos-anywhere}/bin/nixos-anywhere";
+          };
+          disko = {
+            type = "app";
+            program = "${disko.packages.${system}.disko}/bin/disko";
+          };
+        }
+        // nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
+          pre-pr-verify = {
+            type = "app";
+            program = "${prePrVerify}/bin/pre-pr-verify";
+          };
+        }
+      );
     };
 }
