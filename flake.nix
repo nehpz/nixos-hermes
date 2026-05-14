@@ -93,7 +93,7 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           vmTests = pkgs.callPackage ./tests {
-            inherit sops-nix hermes-agent;
+            inherit nixpkgs sops-nix hermes-agent;
           };
         in
         {
@@ -153,7 +153,10 @@
           # Run with: nix build .#checks.x86_64-linux.<name>
           # See AGENTS.md for the testing ladder — use VM tests only for
           # activation script changes.
-          inherit (vmTests) activation-github-auth;
+          inherit (vmTests)
+            activation-github-auth
+            vm-switch-smoke
+            ;
 
           hindsight-service-config =
             let

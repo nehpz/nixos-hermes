@@ -8,6 +8,7 @@
 # appropriate for the change you are making.
 {
   pkgs,
+  nixpkgs,
   sops-nix,
   hermes-agent,
 }:
@@ -75,8 +76,63 @@ let
       system.stateVersion = "25.11";
     };
 
+  # Target closure switched to by vm-switch-smoke. Build this outside the
+  # guest and carry it in the initial VM closure so the smoke proves switch
+  # activation behavior instead of guest-side Nix evaluation, binary-cache
+  # access, DNS, or upstream fetches.
+  vmSwitchTarget = nixpkgs.lib.nixosSystem {
+    system = pkgs.stdenv.hostPlatform.system;
+    modules = [
+      (pkgs.path + "/nixos/modules/virtualisation/qemu-vm.nix")
+      (pkgs.path + "/nixos/modules/testing/test-instrumentation.nix")
+      {
+        boot.loader.grub.enable = false;
+        boot.loader.systemd-boot.enable = false;
+        networking.hostName = "vm-switch-smoke";
+        system.nixos.label = "vm-switch-smoke";
+        environment.etc."agent-workflow-switch-marker".text = "after-switch\n";
+        system.stateVersion = "25.11";
+      }
+    ];
+  };
+
 in
 {
+  # Test: switch to a prebuilt target inside a guest and verify an
+  # activation-visible change. This catches changes that build cleanly but
+  # only fail when switch-to-configuration runs, without depending on guest
+  # network/cache access for nixos-rebuild evaluation.
+  vm-switch-smoke = pkgs.testers.runNixOSTest {
+    name = "vm-switch-smoke";
+
+    nodes.machine =
+      { ... }:
+      {
+        networking.hostName = "vm-switch-smoke";
+        nix.settings.experimental-features = [
+          "nix-command"
+          "flakes"
+        ];
+        environment.etc."agent-workflow-switch-marker".text = "before-switch\n";
+        virtualisation.memorySize = 2048;
+        virtualisation.additionalPaths = [ vmSwitchTarget.config.system.build.toplevel ];
+        system.stateVersion = "25.11";
+      };
+
+    testScript = ''
+      machine.wait_for_unit("multi-user.target")
+      machine.succeed("grep -qx before-switch /etc/agent-workflow-switch-marker")
+
+      machine.succeed(
+          "${vmSwitchTarget.config.system.build.toplevel}/bin/switch-to-configuration switch"
+      )
+      machine.succeed("grep -qx after-switch /etc/agent-workflow-switch-marker")
+      machine.succeed(
+          "test \"$(readlink -f /run/current-system)\" = \"${vmSwitchTarget.config.system.build.toplevel}\""
+      )
+    '';
+  };
+
   # Test: hermes-github-auth activation script
   # Verifies the script correctly writes git and gh credentials from sops secret.
   activation-github-auth = pkgs.testers.runNixOSTest {
