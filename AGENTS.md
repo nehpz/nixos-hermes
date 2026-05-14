@@ -89,7 +89,7 @@ nixos-hermes/
 
 ### Linear Agent Workflow
 
-Linear is the durable coordination layer for agent work. Work should start from a scoped Linear issue, use compact branch names like `yui/ONE-29`, and end with an evidence comment containing branch, commit, changed files, validation, and any runtime follow-up.
+Linear is the durable coordination layer for agent work. Work should start from a scoped Linear issue, use compact branch names like `yui/ONE-29`, and end with an evidence comment containing branch, commit, changed files, validation, skipped checks with reasons, runtime follow-up, known risks, and GitButler stack notes. Use `.agents/skills/agent-workflow-reliability/templates/evidence-comment.md` for final handoff comments.
 
 Use the packaged `linear` CLI for routine agent interactions where possible. It authenticates non-interactively through `LINEAR_API_KEY` from the Hermes secret environment and avoids the headless OAuth problem in Linear's hosted MCP path. Prefer stable JSON output for scripts/reports:
 
@@ -101,6 +101,8 @@ linear issues update ONE-29 --state Review
 ```
 
 Do not use opaque local Python scripts for normal Linear issue operations; if the CLI lacks coverage, use transparent GraphQL/curl commands and document the gap. Do not enable hosted Linear MCP in the default Hermes startup path until service-user OAuth bootstrap is proven.
+
+For workflow-hardening work, load `.agents/skills/agent-workflow-reliability/`. Use its `templates/evidence-comment.md` for handoff evidence and keep durable workflow behavior in the skill rather than duplicating guidance across docs.
 
 ### GitButler Workflow
 
@@ -127,7 +129,9 @@ Right tool, right job. Pick the lightest tool that covers the change.
 
 | Change type | Tool | Root? |
 |---|---|---|
-| Nix eval / syntax | `nix flake check --no-build` | No |
+| Pure docs-only prose | Read/render diff; format or spellcheck if available | No |
+| Docs naming exact Nix options, paths, services, flake outputs, or commands | Run the cheapest referenced command, usually `nix flake check --no-build --no-eval-cache` | No |
+| Nix eval / syntax | `nix flake check --no-build --no-eval-cache` | No |
 | Package add / module option | `nixos-rebuild dry-build --flake .#nixos-hermes` | No |
 | systemd unit change | `nixos-rebuild dry-activate` | Yes |
 | Activation script change | `nix build .#checks.x86_64-linux.<test>` (VM) | No |
@@ -143,6 +147,7 @@ exercise guest-side `nixos-rebuild` flake evaluation or network/cache access.
 VM tests are the right tool when activation scripts change, but may also
 be valuable for other changes where the build alone is insufficient.
 Use judgment — the table above is guidance, not a hard constraint.
+For examples mapping common file edits to minimum and stronger checks, use `.agents/skills/agent-workflow-reliability/references/evidence-examples.md`; for the reusable handoff template, use `.agents/skills/agent-workflow-reliability/templates/evidence-comment.md`.
 `dry-activate` runs `switch-to-configuration dry-activate` to diff
 systemd units without applying changes — needs root but does not
 mutate the running system.
