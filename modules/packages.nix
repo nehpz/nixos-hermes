@@ -15,7 +15,6 @@ let
   # to return the Nix store path directly before any user code runs.
   opusCtypesShim = pkgs.writeTextDir "sitecustomize.py" ''
     import ctypes.util as _cu
-    import sys as _sys
 
     _OPUS_PATH = "${pkgs.libopus}/lib/libopus.so.0"
     _orig = _cu.find_library
@@ -26,19 +25,6 @@ let
         return _orig(name, *args, **kwargs)
 
     _cu.find_library = find_library
-
-    # Append the writable Hindsight venv to sys.path so hindsight-client is importable.
-    # Derive the Python minor version from the running interpreter, not pkgs.python3:
-    # the host nixpkgs Python can differ from Hermes' sealed runtime Python.
-    # Append (not prepend) so hermes-agent-env packages take precedence — this is required
-    # because pip-installed numpy lacks the NixOS patchelf rpath and will fail to load
-    # libstdc++.so.6 if it appears before the store copy.
-    _hindsight_venv = (
-        f"/var/lib/hermes/.venv/lib/python{_sys.version_info.major}.{_sys.version_info.minor}/site-packages"
-    )
-    import os as _os
-    if _os.path.isdir(_hindsight_venv) and _hindsight_venv not in _sys.path:
-        _sys.path.append(_hindsight_venv)
   '';
 in
 {
