@@ -76,7 +76,7 @@ in
 
       # llama-cpp b6981 (pinned nixpkgs) predates Gemma 4 arch support (requires >= b8637).
       # Override with b8770 from nixpkgs-llama until FlakeHub NixOS/nixpkgs/0 catches up.
-      llama-cpp = (nixpkgs-llama.legacyPackages.${pkgs.system}).llama-cpp;
+      llama-cpp = (nixpkgs-llama.legacyPackages.${prev.stdenv.hostPlatform.system}).llama-cpp;
 
       llm-agents = prev.llm-agents // {
         but = prev.llm-agents.but.overrideAttrs (
