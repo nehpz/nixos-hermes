@@ -166,8 +166,12 @@
               pgInitExec = hindsightInitUnit.serviceConfig.ExecStart;
               hermesMemory = hostConfig.services.hermes-agent.settings.memory;
               hermesEnv = hostConfig.services.hermes-agent.environment;
+              hermesExtraPythonPackageNames = map (
+                pkg: pkg.pname or ""
+              ) hostConfig.services.hermes-agent.extraPythonPackages;
               hermesAfter = hostConfig.systemd.services.hermes-agent.after;
               hermesWants = hostConfig.systemd.services.hermes-agent.wants;
+              hermesPythonPath = hostConfig.systemd.services.hermes-agent.environment.PYTHONPATH;
               hindsightActivation = hostConfig.system.activationScripts.hermes-hindsight-config.text;
             in
             pkgs.runCommand "hindsight-service-config" { } ''
@@ -188,6 +192,18 @@
               grep -qx 'HINDSIGHT_API_EMBEDDINGS_OPENAI_MODEL=google_gemma-4-E2B-it-Q6_K_L.gguf' ${envFile}
               grep -qx 'HINDSIGHT_API_RERANKER_PROVIDER=rrf' ${envFile}
               grep -qx 'HINDSIGHT_API_DATABASE_URL=postgresql:///hermes?host=/run/postgresql' ${envFile}
+              test '${toString (builtins.elem "hindsight-client" hermesExtraPythonPackageNames)}' = '1'
+              test -f ${hermesPythonPath}/sitecustomize.py
+              grep -q 'find_library(name' ${hermesPythonPath}/sitecustomize.py
+              grep -q 'libopus.so.0' ${hermesPythonPath}/sitecustomize.py
+              if grep -q 'hindsight_venv' ${hermesPythonPath}/sitecustomize.py; then
+                echo 'sitecustomize.py must not add the Hindsight writable venv to sys.path' >&2
+                exit 1
+              fi
+              if grep -q '/var/lib/hermes/.venv' ${hermesPythonPath}/sitecustomize.py; then
+                echo 'sitecustomize.py must not reference the Hindsight writable venv' >&2
+                exit 1
+              fi
               test '${hermesMemory.provider}' = 'hindsight'
               test '${hermesEnv.HINDSIGHT_MODE}' = 'local_external'
               test '${hermesEnv.HINDSIGHT_API_URL}' = 'http://127.0.0.1:8888'
@@ -242,6 +258,17 @@
               exec ${pkgs.bash}/bin/bash ${./tools/pre-pr-verify.sh} "$@"
             '';
           };
+          hindsightContinuitySmoke = pkgs.writeShellApplication {
+            name = "hindsight-continuity-smoke";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.python3
+              pkgs.systemd
+            ];
+            text = ''
+              exec ${pkgs.bash}/bin/bash ${./tools/hindsight-continuity-smoke.sh} "$@"
+            '';
+          };
         in
         {
           nixos-anywhere = {
@@ -257,6 +284,10 @@
           pre-pr-verify = {
             type = "app";
             program = "${prePrVerify}/bin/pre-pr-verify";
+          };
+          hindsight-continuity-smoke = {
+            type = "app";
+            program = "${hindsightContinuitySmoke}/bin/hindsight-continuity-smoke";
           };
         }
       );

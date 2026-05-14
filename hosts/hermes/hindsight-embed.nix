@@ -14,10 +14,10 @@ let
   # override and avoids coupling this host module to one Hermes build output.
   hermesEnvPython = "${config.services.hermes-agent.package.passthru.hermesVenv}/bin/python3";
 
-  # Writable venv path. Created at service start by ExecStartPre.
-  # Shared with the temporary opusCtypesShim in modules/packages.nix so Hermes can
-  # import hindsight-client during the spike. This is deliberately host-stateful;
-  # ONE-24 should remove the cross-module coupling when the provider wiring is finalized.
+  # Writable Hindsight API venv path. Created at service start by ExecStartPre.
+  # This venv belongs to hindsight-embed.service itself. Agent-facing Hermes
+  # imports `hindsight_client` from services.hermes-agent.extraPythonPackages,
+  # not by adding this mutable venv to the Hermes service PYTHONPATH.
   hindsightVenv = "/var/lib/hermes/.venv";
 
   serviceEnvFile = pkgs.writeText "hindsight-embed.env" (

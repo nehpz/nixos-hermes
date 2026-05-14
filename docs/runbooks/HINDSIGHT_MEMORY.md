@@ -19,7 +19,8 @@ This is promoted from spike to host infrastructure for the personal assistant ho
 - `hosts/hermes/hindsight-memory.nix` — host-local enablement and Hermes provider wiring.
 - `hosts/hermes/llama-server.nix` — llama.cpp service options and unit.
 - `hosts/hermes/hindsight-embed.nix` — PostgreSQL/Hindsight API service and writable venv setup.
-- `modules/packages.nix` — `opusCtypesShim`, including the Hindsight writable venv `sitecustomize.py` path hook.
+- `modules/packages.nix` — `opusCtypesShim`, the CPython `ctypes.util.find_library("opus")` workaround consumed through `PYTHONPATH`.
+- `modules/hermes-plugins.nix` — packaged Hermes runtime Python extras, including `hindsight-client` for agent-facing memory tools.
 - `flake.nix` — `checks.x86_64-linux.hindsight-service-config` regression check.
 
 ## Model file placement
@@ -102,7 +103,38 @@ Expected:
 
 ## Hermes provider smoke
 
-Before activating a new config, use a temp `HERMES_HOME` to prove the provider config shape:
+Before activating a new config, use a temp `HERMES_HOME` to prove the provider config shape and the same interpreter/import path that the running Hermes service exposes:
+
+```bash
+tools/hindsight-continuity-smoke.sh --timeout 180
+```
+
+The smoke performs the useful checks in order:
+
+1. `hindsight-embed` API health reports healthy/database connected.
+2. The Python interpreter from `hermes-agent.service` can import the packaged `hindsight_client`; service `PYTHONPATH` is only carried along for other runtime shims such as Opus discovery.
+3. A unique tagged fact is retained synchronously through `/memories`.
+4. Bank stats are fetched before/after retain.
+5. Tagged direct API recall returns the unique marker.
+
+Expected output starts with:
+
+```text
+Hindsight continuity smoke: PASS
+- api_url: http://127.0.0.1:8888
+- bank: hermes
+- python: …
+- import: hindsight_client
+- health: healthy / database=connected
+```
+
+For pre-PR verification on Hindsight wiring changes, run:
+
+```bash
+tools/pre-pr-verify.sh --hindsight-live
+```
+
+For lower-level provider config debugging, the manual provider instantiation path is:
 
 ```bash
 tmp=$(mktemp -d)
@@ -174,16 +206,20 @@ Fix:
 jq . /var/lib/hermes/hindsight/config.json
 ```
 
-### Writable venv Python mismatch
+### Hindsight client import failure
 
 Symptom:
 
 - Hermes cannot import `hindsight-client` even though `hindsight-embed` works.
-- `sitecustomize.py` points at `/var/lib/hermes/.venv/lib/python3.13/site-packages` while Hermes runs Python 3.12.
+- Direct Hindsight API retain/recall works, but agent-facing memory tools fail with `No module named 'hindsight_client'`.
 
 Fix:
 
-- `opusCtypesShim` derives the path from `sys.version_info`; rebuild to pick up the fixed generated shim.
+- `hindsight-client` is packaged in `modules/hermes-plugins.nix` through `services.hermes-agent.extraPythonPackages`.
+- `opusCtypesShim` remains only an Opus library-discovery workaround; it must not append the writable Hindsight venv to `sys.path`.
+- Rebuild and run `tools/hindsight-continuity-smoke.sh --timeout 180`.
+
+Historical note: ONE-37 / PR #38 fixed a previous stopgap where `sitecustomize.py` pointed at `/var/lib/hermes/.venv/lib/python3.13/site-packages` while Hermes ran Python 3.12. ONE-50 replaces that import-path stopgap with a packaged Hermes runtime dependency.
 
 ### Hindsight API unhealthy
 
