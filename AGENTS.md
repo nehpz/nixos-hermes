@@ -249,6 +249,8 @@ After first install:
   Community overlays (e.g. `llm-agents`) are added here until they land upstream.
 - Also owns workarounds for NixOS packaging behaviour that affect services on this
   host (e.g. the `opusCtypesShim` for CPython's patched `ctypes.util.find_library`).
+  Keep that shim scoped to Opus discovery; Hindsight's agent-facing Python client
+  belongs in `services.hermes-agent.extraPythonPackages`, not in this `sitecustomize.py`.
 - Exposes shims via the overlay (e.g. `pkgs.opusCtypesShim`) so service modules
   can consume them without coupling to this file directly.
 
