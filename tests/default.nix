@@ -81,11 +81,11 @@ let
   # activation behavior instead of guest-side Nix evaluation, binary-cache
   # access, DNS, or upstream fetches.
   vmSwitchTarget = nixpkgs.lib.nixosSystem {
-    system = pkgs.stdenv.hostPlatform.system;
     modules = [
       (pkgs.path + "/nixos/modules/virtualisation/qemu-vm.nix")
       (pkgs.path + "/nixos/modules/testing/test-instrumentation.nix")
       {
+        nixpkgs.hostPlatform = pkgs.stdenv.hostPlatform.system;
         boot.loader.grub.enable = false;
         boot.loader.systemd-boot.enable = false;
         networking.hostName = "vm-switch-smoke";
