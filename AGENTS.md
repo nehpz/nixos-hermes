@@ -134,6 +134,12 @@ Right tool, right job. Pick the lightest tool that covers the change.
 | Real secrets / hardware / network | `nixos-rebuild test` | Yes |
 
 The VM tests live under `tests/` and run via QEMU — no root needed.
+`checks.x86_64-linux.vm-switch-smoke` is the heaviest repo-owned smoke:
+it boots a VM, switches to a prebuilt target system inside the guest with
+`switch-to-configuration switch`, and verifies `/etc` plus
+`/run/current-system` moved. Use it when build/dry-activate proof is not
+enough for activation or switch-time behavior. It intentionally does not
+exercise guest-side `nixos-rebuild` flake evaluation or network/cache access.
 VM tests are the right tool when activation scripts change, but may also
 be valuable for other changes where the build alone is insufficient.
 Use judgment — the table above is guidance, not a hard constraint.

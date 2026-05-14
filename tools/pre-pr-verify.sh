@@ -13,7 +13,7 @@ Runs the local pre-PR gates that should catch mechanical Nix errors before revie
 Modes:
   default          flake eval/check + host dry-build + generated-config checks
   --quick          flake eval/check + generated-config checks, skip dry-build
-  --full           default + VM activation tests
+  --full           default + VM activation/switch tests
   --skip-dry-build explicitly skip dry-build and record why via SKIP_REASON
   --hindsight-live also run tools/hindsight-continuity-smoke.sh against live services
 
@@ -96,8 +96,9 @@ fi
 
 if [[ "$mode" == "full" ]]; then
   run "activation VM test: github auth provisioning" nix build ".#checks.${check_system}.activation-github-auth" --no-link -L
+  run "switch VM test: prebuilt target activation" nix build ".#checks.${check_system}.vm-switch-smoke" --no-link -L
 else
-  skip "activation VM tests"
+  skip "activation/switch VM tests"
 fi
 
 if [[ "$hindsight_live" == true ]]; then
@@ -116,6 +117,6 @@ Pre-PR verification evidence
 - flake eval/check: PASS
 - generated service config invariants: PASS
 - dry-build: $([[ "$skip_dry_build" == true ]] && echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})" || echo PASS)
-- activation VM tests: $([[ "$mode" == "full" ]] && echo PASS || echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})")
+- activation/switch VM tests: $([[ "$mode" == "full" ]] && echo PASS || echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})")
 - live Hindsight continuity smoke: $([[ "$hindsight_live" == true ]] && echo PASS || echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})")
 EVIDENCE
