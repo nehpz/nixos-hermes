@@ -102,7 +102,38 @@ Expected:
 
 ## Hermes provider smoke
 
-Before activating a new config, use a temp `HERMES_HOME` to prove the provider config shape:
+Before activating a new config, use a temp `HERMES_HOME` to prove the provider config shape and the same interpreter/import path that the running Hermes service exposes:
+
+```bash
+tools/hindsight-continuity-smoke.sh --timeout 180
+```
+
+The smoke performs the useful checks in order:
+
+1. `hindsight-embed` API health reports healthy/database connected.
+2. The Python interpreter and `PYTHONPATH` from `hermes-agent.service` can import `hindsight_client`.
+3. A unique tagged fact is retained synchronously through `/memories`.
+4. Bank stats are fetched before/after retain.
+5. Tagged direct API recall returns the unique marker.
+
+Expected output starts with:
+
+```text
+Hindsight continuity smoke: PASS
+- api_url: http://127.0.0.1:8888
+- bank: hermes
+- python: …
+- import: hindsight_client
+- health: healthy / database=connected
+```
+
+For pre-PR verification on Hindsight wiring changes, run:
+
+```bash
+tools/pre-pr-verify.sh --hindsight-live
+```
+
+For lower-level provider config debugging, the manual provider instantiation path is:
 
 ```bash
 tmp=$(mktemp -d)

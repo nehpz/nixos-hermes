@@ -168,6 +168,7 @@
               hermesEnv = hostConfig.services.hermes-agent.environment;
               hermesAfter = hostConfig.systemd.services.hermes-agent.after;
               hermesWants = hostConfig.systemd.services.hermes-agent.wants;
+              hermesPythonPath = hostConfig.systemd.services.hermes-agent.environment.PYTHONPATH;
               hindsightActivation = hostConfig.system.activationScripts.hermes-hindsight-config.text;
             in
             pkgs.runCommand "hindsight-service-config" { } ''
@@ -188,6 +189,12 @@
               grep -qx 'HINDSIGHT_API_EMBEDDINGS_OPENAI_MODEL=google_gemma-4-E2B-it-Q6_K_L.gguf' ${envFile}
               grep -qx 'HINDSIGHT_API_RERANKER_PROVIDER=rrf' ${envFile}
               grep -qx 'HINDSIGHT_API_DATABASE_URL=postgresql:///hermes?host=/run/postgresql' ${envFile}
+              test -f ${hermesPythonPath}/sitecustomize.py
+              grep -q 'hindsight-client is importable' ${hermesPythonPath}/sitecustomize.py
+              grep -q 'sys.version_info.major' ${hermesPythonPath}/sitecustomize.py
+              grep -q 'sys.version_info.minor' ${hermesPythonPath}/sitecustomize.py
+              grep -q 'sys.path.append(_hindsight_venv)' ${hermesPythonPath}/sitecustomize.py
+              ! grep -q '/var/lib/hermes/.venv/lib/python3.13/site-packages' ${hermesPythonPath}/sitecustomize.py
               test '${hermesMemory.provider}' = 'hindsight'
               test '${hermesEnv.HINDSIGHT_MODE}' = 'local_external'
               test '${hermesEnv.HINDSIGHT_API_URL}' = 'http://127.0.0.1:8888'
@@ -242,6 +249,17 @@
               exec ${pkgs.bash}/bin/bash ${./tools/pre-pr-verify.sh} "$@"
             '';
           };
+          hindsightContinuitySmoke = pkgs.writeShellApplication {
+            name = "hindsight-continuity-smoke";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.python3
+              pkgs.systemd
+            ];
+            text = ''
+              exec ${pkgs.bash}/bin/bash ${./tools/hindsight-continuity-smoke.sh} "$@"
+            '';
+          };
         in
         {
           nixos-anywhere = {
@@ -257,6 +275,10 @@
           pre-pr-verify = {
             type = "app";
             program = "${prePrVerify}/bin/pre-pr-verify";
+          };
+          hindsight-continuity-smoke = {
+            type = "app";
+            program = "${hindsightContinuitySmoke}/bin/hindsight-continuity-smoke";
           };
         }
       );

@@ -6,7 +6,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: tools/pre-pr-verify.sh [--quick] [--full] [--skip-dry-build]
+Usage: tools/pre-pr-verify.sh [--quick] [--full] [--skip-dry-build] [--hindsight-live]
 
 Runs the local pre-PR gates that should catch mechanical Nix errors before review.
 
@@ -15,6 +15,7 @@ Modes:
   --quick          flake eval/check + generated-config checks, skip dry-build
   --full           default + VM activation tests
   --skip-dry-build explicitly skip dry-build and record why via SKIP_REASON
+  --hindsight-live also run tools/hindsight-continuity-smoke.sh against live services
 
 Environment:
   CHECK_SYSTEM     flake system to use for system-specific checks (default: current system)
@@ -26,6 +27,7 @@ USAGE
 
 mode="default"
 skip_dry_build=false
+hindsight_live=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -38,6 +40,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-dry-build)
       skip_dry_build=true
+      ;;
+    --hindsight-live)
+      hindsight_live=true
       ;;
     -h|--help)
       usage
@@ -95,6 +100,12 @@ else
   skip "activation VM tests"
 fi
 
+if [[ "$hindsight_live" == true ]]; then
+  run "live Hindsight continuity smoke" tools/hindsight-continuity-smoke.sh
+else
+  skip "live Hindsight continuity smoke"
+fi
+
 cat <<EVIDENCE
 Pre-PR verification evidence
 - branch: ${branch}
@@ -106,4 +117,5 @@ Pre-PR verification evidence
 - generated service config invariants: PASS
 - dry-build: $([[ "$skip_dry_build" == true ]] && echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})" || echo PASS)
 - activation VM tests: $([[ "$mode" == "full" ]] && echo PASS || echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})")
+- live Hindsight continuity smoke: $([[ "$hindsight_live" == true ]] && echo PASS || echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})")
 EVIDENCE

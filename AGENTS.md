@@ -287,6 +287,16 @@ After first install:
 
 ## Testing and Validation
 
+For Hindsight/memory-provider wiring changes, `nix flake check` and service health are not enough. Run the observable continuity smoke too:
+
+```bash
+tools/pre-pr-verify.sh --hindsight-live
+# or directly:
+tools/hindsight-continuity-smoke.sh --timeout 180
+```
+
+That smoke must prove the Hermes runtime can import `hindsight_client`, direct retain extracts a fact, bank stats are visible, and direct recall returns the retained marker. After context compaction or continuity failures, give at most one concise accountability note, then move to evidence, diagnosis, and durable fixes; repeated apology/explanation loops are the bug, not the remedy.
+
 ### Local Check (No Host Needed)
 
 ```bash
