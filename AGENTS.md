@@ -89,7 +89,27 @@ nixos-hermes/
 
 ### Linear Agent Workflow
 
-Linear is the durable coordination layer for agent work. Work should start from a scoped Linear issue, use compact branch names like `yui/ONE-29`, and end with an evidence comment containing branch, commit, changed files, validation, and any runtime follow-up.
+Linear is the durable coordination layer for agent work. Work should start from a scoped Linear issue, use compact branch names like `yui/ONE-29`, and end with an evidence comment containing branch, commit, changed files, validation, skipped checks with reasons, runtime follow-up, known risks, and GitButler stack notes.
+
+When a deterministic miss reaches review or runtime, write the correction as present-tense operating guidance: describe the reliable workflow that should now exist, the gate that catches the class of miss, and the evidence that proves it. Avoid postmortem theater unless history itself changes the decision.
+
+Evidence comment shape:
+
+```markdown
+Implementation ready for review.
+
+- Issue: <issue-id>
+- PR or compare URL: <url>
+- Branch: `<actor>/<issue-id>`
+- Commits: `<sha>`
+- Changed files:
+  - `<path>` — <why it changed>
+- Validation: `<command>` → <result>
+- Skipped checks: <none, or command + reason>
+- Runtime/deployment follow-up: <none, or exact operator action>
+- Known risks: <none, or concise rationale>
+- GitButler / stack notes: <independent, or stacked on ...>
+```
 
 Use the packaged `linear` CLI for routine agent interactions where possible. It authenticates non-interactively through `LINEAR_API_KEY` from the Hermes secret environment and avoids the headless OAuth problem in Linear's hosted MCP path. Prefer stable JSON output for scripts/reports:
 
@@ -125,13 +145,34 @@ See `docs/guides/GITBUTLER_WORKFLOW.md` for the full workflow and hook notes.
 
 Right tool, right job. Pick the lightest tool that covers the change.
 
+GitHub Actions is a mechanical prefilter, not a deployment oracle. The pre-PR CI
+workflow runs `tools/pre-pr-verify.sh --quick` on a fresh generic Nix runner; in
+CI the script performs a full `nix flake check --no-eval-cache -L` so cold-store
+import-from-derivation helpers are built instead of hidden by local cache state.
+Trust a green CI run for flake evaluation, repo-owned checks, and generated
+configuration invariants. Do **not** trust it to prove host activation, live
+secrets, hardware, networking, or mutable service-state behavior on the
+Determinate NixOS host. Use the ladder below to add VM, dry-activate, or live
+host proof when those are the actual risks.
+
 | Change type | Tool | Root? |
 |---|---|---|
-| Nix eval / syntax | `nix flake check --no-build` | No |
+| Pure docs-only prose | Read/render diff; format or spellcheck if available | No |
+| Docs naming exact Nix options, paths, services, flake outputs, or commands | Run the cheapest referenced command, usually `nix flake check --no-build --no-eval-cache` | No |
+| Nix eval / syntax | `nix flake check --no-build --no-eval-cache` | No |
 | Package add / module option | `nixos-rebuild dry-build --flake .#nixos-hermes` | No |
 | systemd unit change | `nixos-rebuild dry-activate` | Yes |
 | Activation script change | `nix build .#checks.x86_64-linux.<test>` (VM) | No |
 | Real secrets / hardware / network | `nixos-rebuild test` | Yes |
+
+Examples:
+
+| Edit | Minimum check | Escalate when |
+|---|---|---|
+| `AGENTS.md` prose only | Read the diff; `nix fmt AGENTS.md` | Run named commands if the docs introduce or change exact executable guidance |
+| `flake.nix`, host imports, or module option wiring | `nix flake check --no-build --no-eval-cache` | `nixos-rebuild dry-build --flake .#nixos-hermes` if closure/build behavior changes |
+| Activation or switch-time behavior | Existing VM test or a new focused VM check | `checks.x86_64-linux.vm-switch-smoke` when the real switch path is the risk |
+| Workflow or CI YAML | `nix flake check --no-build --no-eval-cache` if wired locally; otherwise inspect the rendered workflow and let GitHub run it on PR | Manual dispatch or `act` only when local semantics matter |
 
 The VM tests live under `tests/` and run via QEMU — no root needed.
 `checks.x86_64-linux.vm-switch-smoke` is the heaviest repo-owned smoke:
