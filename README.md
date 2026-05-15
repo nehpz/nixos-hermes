@@ -173,11 +173,26 @@ nixos-rebuild switch --flake .#nixos-hermes \
 
 ---
 
-## CI
+## CI and Deployment Trust
 
-GitHub Actions publishes the flake to FlakeHub on every push to `main` using the
-[DeterminateSystems](https://determinate.systems/) stack. Requires one repository
-secret: `FLAKEHUB_TOKEN` (set under Settings → Secrets and variables → Actions).
+Pull requests run **Pre-PR verification** on GitHub Actions. That workflow is a
+mechanical prefilter: it runs the repo-owned check script on a fresh generic Nix
+runner and permits builds during `nix flake check` so import-from-derivation
+helpers are realized in the cold CI store. A green check proves the flake
+evaluates, repo-owned checks build, and generated configuration invariants pass.
+
+It is not deployment proof. The production host uses the Determinate NixOS image
+and has real hardware, secrets, mutable service state, and activation behavior
+that GitHub's Ubuntu runner cannot exercise. Changes that touch activation,
+systemd relationships, secrets, hardware, networking, or live services still need
+the appropriate host/VM gate from `AGENTS.md` before they are treated as safe to
+rebuild.
+
+GitHub Actions also publishes the flake to FlakeHub on every push to `main` using
+the [DeterminateSystems](https://determinate.systems/) stack. That publish job is
+distribution plumbing, not a substitute for pre-PR validation. It requires one
+repository secret: `FLAKEHUB_TOKEN` (set under Settings → Secrets and variables →
+Actions).
 
 ---
 

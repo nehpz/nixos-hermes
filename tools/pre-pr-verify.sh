@@ -85,7 +85,15 @@ start_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 head_sha="$(git rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
 branch="$(git branch --show-current 2>/dev/null || echo unknown)"
 
-run "flake eval/check" nix flake check --no-build --no-eval-cache
+if [[ "${CI:-}" == true ]]; then
+  # Cold GitHub runners cannot reliably use the local developer shortcut
+  # `--no-build`: the Hermes tool closure includes import-from-derivation
+  # package helpers that may not exist in a fresh store yet. In CI, build the
+  # flake checks instead of weakening coverage.
+  run "flake check" nix flake check --no-eval-cache -L
+else
+  run "flake eval/check" nix flake check --no-build --no-eval-cache
+fi
 run "generated Hindsight service config invariants" nix build ".#checks.${check_system}.hindsight-service-config" --no-link -L
 
 if [[ "$skip_dry_build" == true ]]; then
