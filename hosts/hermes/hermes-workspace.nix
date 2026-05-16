@@ -30,7 +30,29 @@ let
     _apt:x:42:65534::/nonexistent:/usr/sbin/nologin
     nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
     node:x:1000:1000::/home/node:/bin/bash
-    workspace:x:999:999::/home/workspace:/bin/bash
+    hermes:x:999:999::/home/hermes:/bin/bash
+  '';
+  workspaceGroup = pkgs.writeText "hermes-workspace-group" ''
+    root:x:0:
+    daemon:x:1:
+    bin:x:2:
+    sys:x:3:
+    adm:x:4:
+    tty:x:5:
+    disk:x:6:
+    lp:x:7:
+    mail:x:8:
+    news:x:9:
+    uucp:x:10:
+    man:x:12:
+    proxy:x:13:
+    www-data:x:33:
+    backup:x:34:
+    list:x:38:
+    irc:x:39:
+    nogroup:x:65534:
+    node:x:1000:
+    hermes:x:999:
   '';
 in
 {
@@ -94,13 +116,13 @@ in
       autoStart = true;
       user = "999:999";
       environment = {
-        HOME = "/home/workspace";
-        LOGNAME = "workspace";
+        HOME = "/home/hermes";
+        LOGNAME = "hermes";
         SHELL = "/bin/bash";
         HOST = "127.0.0.1";
         PORT = "3000";
-        USER = "workspace";
-        HERMES_HOME = "/home/workspace/.hermes";
+        USER = "hermes";
+        HERMES_HOME = "/home/hermes/.hermes";
         HERMES_WORKSPACE_DIR = "/workspace";
         HERMES_API_URL = "http://127.0.0.1:8642";
         HERMES_DASHBOARD_URL = "http://127.0.0.1:9119";
@@ -108,7 +130,15 @@ in
       };
       volumes = [
         "${workspacePasswd}:/etc/passwd:ro"
-        "${hermesHome}:/home/workspace/.hermes"
+        "${workspaceGroup}:/etc/group:ro"
+        "${./assets/hermes-workspace/main-CSQgeRS2.js}:/app/dist/client/assets/main-CSQgeRS2.js:ro"
+        "${./assets/hermes-workspace/router-DxziTUUJ.js}:/app/dist/server/assets/router-DxziTUUJ.js:ro"
+        "${pkgs.glibc}:${pkgs.glibc}:ro"
+        "${pkgs.zlib}:${pkgs.zlib}:ro"
+        "${pkgs.sqlite}/bin/sqlite3:/usr/local/bin/sqlite3:ro"
+        "${./assets/hermes-workspace/terminal-workspace-client.js}:/app/dist/client/assets/terminal-workspace-kHpbSPuZ.js:ro"
+        "${./assets/hermes-workspace/terminal-workspace-server.js}:/app/dist/server/assets/terminal-workspace-Di9M3poT.js:ro"
+        "${hermesHome}:/home/hermes/.hermes"
         "${hermesCfg.workingDirectory}:/workspace"
       ];
       extraOptions = [ "--network=host" ];
