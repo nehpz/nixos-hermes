@@ -77,9 +77,9 @@ let
     };
 
   # Target closure switched to by vm-switch-smoke. Build this outside the
-  # guest and carry it in the initial VM closure so the smoke proves switch
-  # activation behavior instead of guest-side Nix evaluation, binary-cache
-  # access, DNS, or upstream fetches.
+  # guest and carry it in the initial VM closure so the smoke can run the real
+  # nixos-rebuild switch command without depending on guest-side upstream
+  # fetches, DNS, or binary-cache access.
   vmSwitchTarget = nixpkgs.lib.nixosSystem {
     modules = [
       (pkgs.path + "/nixos/modules/virtualisation/qemu-vm.nix")
@@ -96,12 +96,42 @@ let
     ];
   };
 
+  # Minimal flake consumed by nixos-rebuild inside the guest. It intentionally
+  # points at the prebuilt target closure above, so the test exercises the real
+  # nixos-rebuild switch workflow while keeping all inputs declarative and
+  # available in the VM store closure.
+  vmSwitchFlake = pkgs.writeTextDir "flake.nix" ''
+    {
+      inputs.nixos-rebuild = {
+        url = "path:${pkgs.nixos-rebuild}";
+        flake = false;
+      };
+      inputs.toplevel = {
+        url = "path:${vmSwitchTarget.config.system.build.toplevel}";
+        flake = false;
+      };
+
+      outputs =
+        {
+          self,
+          nixos-rebuild,
+          toplevel,
+        }:
+        {
+          nixosConfigurations.vm-switch-smoke.config.system.build = {
+            nixos-rebuild = nixos-rebuild.outPath;
+            toplevel = toplevel.outPath;
+          };
+        };
+    }
+  '';
+
 in
 {
-  # Test: switch to a prebuilt target inside a guest and verify an
-  # activation-visible change. This catches changes that build cleanly but
-  # only fail when switch-to-configuration runs, without depending on guest
-  # network/cache access for nixos-rebuild evaluation.
+  # Test: run a real nixos-rebuild switch inside a guest against a declarative,
+  # store-backed flake and verify an activation-visible change. This catches
+  # changes that build cleanly but only fail during the switch workflow, without
+  # touching the host generation or depending on ad hoc SSH/operator state.
   vm-switch-smoke = pkgs.testers.runNixOSTest {
     name = "vm-switch-smoke";
 
@@ -113,9 +143,13 @@ in
           "nix-command"
           "flakes"
         ];
+        environment.systemPackages = [ pkgs.nixos-rebuild ];
         environment.etc."agent-workflow-switch-marker".text = "before-switch\n";
         virtualisation.memorySize = 2048;
-        virtualisation.additionalPaths = [ vmSwitchTarget.config.system.build.toplevel ];
+        virtualisation.additionalPaths = [
+          vmSwitchFlake
+          vmSwitchTarget.config.system.build.toplevel
+        ];
         system.stateVersion = "25.11";
       };
 
@@ -124,7 +158,7 @@ in
       machine.succeed("grep -qx before-switch /etc/agent-workflow-switch-marker")
 
       machine.succeed(
-          "${vmSwitchTarget.config.system.build.toplevel}/bin/switch-to-configuration switch"
+          "nixos-rebuild switch --flake ${vmSwitchFlake}#vm-switch-smoke"
       )
       machine.succeed("grep -qx after-switch /etc/agent-workflow-switch-marker")
       machine.succeed(

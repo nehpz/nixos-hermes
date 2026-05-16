@@ -130,31 +130,35 @@ Right tool, right job. Pick the lightest tool that covers the change, but do not
 | Nix eval / syntax | `nix flake check --no-build` | No | The flake evaluates. |
 | Package add / module option | `nixos-rebuild dry-build --flake .#nixos-hermes` | No | The target system builds. |
 | systemd unit change | `nixos-rebuild dry-activate` | Yes | Unit diffs/activation script dry-run. |
-| Activation script change | `nix build .#checks.x86_64-linux.<test>` (VM) | No | Repo-owned VM behavior. |
+| Activation / switch workflow change | `nix build .#checks.x86_64-linux.vm-switch-smoke` (VM) | No | A repo-owned guest can run the real `nixos-rebuild switch` path declaratively. |
 | Real secrets / hardware / network | `nixos-rebuild test` | Yes | Live host behavior without making boot default. |
-| Actual deployment requested | `nixos-rebuild switch --flake /var/lib/hermes/workspace/nixos-hermes#nixos-hermes` as local `admin`/root | Yes | The live host is on the new generation. |
+| Actual host deployment requested | `nixos-rebuild switch --flake /var/lib/hermes/workspace/nixos-hermes#nixos-hermes` from an intentionally authorized operator context | Yes | The live host is on the new generation. |
 
 The VM tests live under `tests/` and run via QEMU — no root needed.
 `checks.x86_64-linux.vm-switch-smoke` is the heaviest repo-owned smoke:
-it boots a VM, switches to a prebuilt target system inside the guest with
-`switch-to-configuration switch`, and verifies `/etc` plus
-`/run/current-system` moved. Use it when build/dry-activate proof is not
-enough for activation or switch-time behavior. It intentionally does not
-exercise guest-side `nixos-rebuild` flake evaluation or network/cache access.
-VM tests are the right tool when activation scripts change, but may also
-be valuable for other changes where the build alone is insufficient.
-Use judgment — the table above is guidance, not a hard constraint.
-`dry-activate` runs `switch-to-configuration dry-activate` to diff
-systemd units without applying changes — needs root but does not
-mutate the running system.
+it boots a VM, runs `nixos-rebuild switch` inside the guest against a
+store-backed declarative flake, and verifies `/etc` plus `/run/current-system`
+moved. Use it when build proof is not enough for activation or switch-time
+behavior. This is the preferred validation gate for deployment mechanics because
+it exercises the NixOS deployment workflow without mutating the host or relying
+on ad hoc SSH/operator state. VM tests are the right tool when activation
+scripts change, but may also be valuable for other changes where the build alone
+is insufficient. Use judgment — the table above is guidance, not a hard
+constraint. `dry-activate` runs `switch-to-configuration dry-activate` to diff
+systemd units without applying changes — needs root but does not mutate the
+running system.
 
-If an agent cannot run a host switch as the `hermes` service user, that is not
-a deployment blocker by itself, but it also is not a cue to SSH back into the
-same host and patch service-account `known_hosts`. Use the NixOS-native local
-activation path through `admin`/root with an absolute flake path. Manual runtime
-starts, `docker run`, process restarts, or editing `$HERMES_HOME/.env` are smoke
-tests only; do not call the work deployed until the live generation has been
-switched or you have explicitly reported that local switch access is blocked.
+If an agent cannot run a host switch as the `hermes` service user, do not route
+around it with imperative host-state patches such as `ssh-keyscan` into
+service-account `known_hosts`, and do not redefine local `admin`/root activation
+as the preferred path. First prove the deployment mechanics in a declarative VM.
+For live host rollout, use an explicitly authorized operator path whose SSH
+trust, keys, and sudo boundaries are intentionally provisioned; otherwise report
+"built and VM-switch-proven, live host switch pending" with the exact blocker.
+Manual runtime starts, `docker run`, process restarts, or editing
+`$HERMES_HOME/.env` are smoke tests only; do not call the work deployed until the
+live generation has been switched or you have explicitly reported that live
+switch access is blocked.
 
 **Exception to the age private key rule:** `tests/assets/age-test-key.txt`
 is a throwaway key committed intentionally — it encrypts only dummy test
