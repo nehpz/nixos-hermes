@@ -7,6 +7,7 @@
     ./sops.nix
     ./provision.nix
     ./virtualisation.nix
+    ./hermes-workspace.nix
     ./llama-server.nix
     ./hindsight-embed.nix
     ./hindsight-memory.nix
