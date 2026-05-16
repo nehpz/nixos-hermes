@@ -47,15 +47,79 @@ let
     + "\n"
   );
 
-  startScript = pkgs.writeShellScript "hindsight-embed-start" ''
+  llmPreflightPython = pkgs.writeText "hindsight-llm-preflight.py" ''
+    import json
+    import os
+    import sys
+    import urllib.error
+    import urllib.request
+
+    base_url = os.environ["HINDSIGHT_API_LLM_BASE_URL"].rstrip("/")
+    model = os.environ["HINDSIGHT_API_LLM_MODEL"]
+    api_key = os.environ["HINDSIGHT_API_LLM_API_KEY"]
+    models_url = f"{base_url}/models"
+
+    request = urllib.request.Request(
+        models_url,
+        method="GET",
+        headers={"Authorization": f"Bearer {api_key}"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            body = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        raise SystemExit(f"Hindsight LLM preflight failed: HTTP {exc.code} from {models_url}: {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise SystemExit(f"Hindsight LLM preflight failed: connection error to {models_url}: {exc.reason}") from exc
+
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Hindsight LLM preflight failed: invalid JSON from {models_url}: {body[:500]}") from exc
+
+    if not isinstance(payload, dict):
+        raise SystemExit(
+            f"Hindsight LLM preflight failed: expected JSON object from {models_url}, "
+            f"got {type(payload).__name__}"
+        )
+
+    data = payload.get("data") or []
+    if not isinstance(data, list):
+        raise SystemExit(
+            f"Hindsight LLM preflight failed: expected JSON array at {models_url} data field, "
+            f"got {type(data).__name__}"
+        )
+
+    model_ids = {str(item.get("id")) for item in data if isinstance(item, dict) and item.get("id")}
+    if model not in model_ids:
+        sample = ", ".join(sorted(model_ids)[:20])
+        raise SystemExit(f"Missing configured Hindsight LLM model {model!r} from {models_url}; sample models: {sample}")
+
+    print(f"Hindsight LLM preflight OK: {model} listed by {models_url}")
+  '';
+
+  recoveryPreflightScript = pkgs.writeShellScript "hindsight-embed-recovery-preflight" ''
     set -euo pipefail
     export HINDSIGHT_API_LLM_API_KEY="$(cat "$CREDENTIALS_DIRECTORY/cliproxyapi-key")"
 
-    # Fail fast when the external LLM proxy is unreachable. Without this,
-    # hindsight-api can sit "active" but unbound on 127.0.0.1:8888 while its
-    # startup path waits on a TCP SYN to the proxy.
-    ${hindsightVenv}/bin/python3 -c 'import os, socket, sys, urllib.parse; url = urllib.parse.urlparse(os.environ["HINDSIGHT_API_LLM_BASE_URL"]); host = url.hostname; port = url.port or (443 if url.scheme == "https" else 80); socket.create_connection((host, port), timeout=5).close()'
+    # Release work claimed by a previous API/worker process before accepting
+    # post-rebuild retain requests. This deployment runs a single Hindsight API
+    # worker; revisit this if the database ever backs multiple live workers.
+    if [ "$(${config.services.postgresql.package}/bin/psql "$HINDSIGHT_API_DATABASE_URL" -tAc "select to_regclass('public.async_operations')")" = "async_operations" ]; then
+      ${hindsightVenv}/bin/python3 -m hindsight_api.admin.cli decommission-workers --yes
+    fi
 
+    # Fail fast before systemd marks the service started. The /models check
+    # proves the OpenAI-compatible route, credential, and configured model, while
+    # the outer timeout prevents a stuck dependency probe from greenwashing unit
+    # startup with no API socket bound.
+    ${pkgs.coreutils}/bin/timeout 15s ${hindsightVenv}/bin/python3 ${llmPreflightPython}
+  '';
+
+  startScript = pkgs.writeShellScript "hindsight-embed-start" ''
+    set -euo pipefail
+    export HINDSIGHT_API_LLM_API_KEY="$(cat "$CREDENTIALS_DIRECTORY/cliproxyapi-key")"
     exec ${hindsightVenv}/bin/hindsight-api --host 127.0.0.1 --port 8888
   '';
 
@@ -63,12 +127,18 @@ let
     set -euo pipefail
     VENV="${hindsightVenv}"
     PYTHON="${hermesEnvPython}"
+    PYTHON_MARKER="$VENV/.hermes-python"
+    CURRENT_PYTHON="$(readlink -f "$PYTHON")"
     needs_install=0
 
     # Recreate the venv when Hermes' sealed Python changes after a NixOS rebuild.
-    if [ ! -f "$VENV/bin/python3" ] || [ "$(readlink -f "$VENV/bin/python3")" != "$(readlink -f "$PYTHON")" ]; then
+    # A venv's bin/python3 resolves to the underlying CPython interpreter, not the
+    # hermes-agent-env wrapper used to create it, so track the creator path in a
+    # marker file instead of comparing readlink targets directly.
+    if [ ! -f "$VENV/bin/python3" ] || [ ! -f "$PYTHON_MARKER" ] || [ "$(cat "$PYTHON_MARKER")" != "$CURRENT_PYTHON" ]; then
       echo "Creating/refreshing hindsight venv at $VENV..."
       "$PYTHON" -m venv --system-site-packages --clear "$VENV"
+      printf '%s\n' "$CURRENT_PYTHON" > "$PYTHON_MARKER"
       needs_install=1
     fi
 
@@ -183,6 +253,13 @@ in
       ]
       ++ lib.optionals cfg.llama.enable [ "llama-server.service" ];
 
+      restartTriggers = [
+        serviceEnvFile
+        setupScript
+        recoveryPreflightScript
+        startScript
+      ];
+
       serviceConfig = {
         Type = "simple";
         User = "hermes";
@@ -191,7 +268,10 @@ in
         RestartSec = "5s";
         EnvironmentFile = [ serviceEnvFile ];
         LoadCredential = [ "cliproxyapi-key:${config.sops.secrets.cliproxyapi-key.path}" ];
-        ExecStartPre = setupScript;
+        ExecStartPre = [
+          setupScript
+          recoveryPreflightScript
+        ];
         # Run hindsight-api directly in foreground (no --daemon flag).
         # systemd manages the lifecycle; daemon mode would fork away and break Type=simple.
         ExecStart = startScript;

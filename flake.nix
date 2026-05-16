@@ -166,6 +166,11 @@
               llamaUnit = hostConfig.systemd.services.llama-server;
               envFile = builtins.head (pkgs.lib.toList hindsightUnit.serviceConfig.EnvironmentFile);
               llamaExec = llamaUnit.serviceConfig.ExecStart;
+              hindsightExec = hindsightUnit.serviceConfig.ExecStart;
+              hindsightExecStartPre = pkgs.lib.toList hindsightUnit.serviceConfig.ExecStartPre;
+              hindsightSetupExec = builtins.elemAt hindsightExecStartPre 0;
+              hindsightRecoveryExec = builtins.elemAt hindsightExecStartPre 1;
+              hindsightRestartTriggers = pkgs.lib.toList hindsightUnit.restartTriggers;
               pgInitExec = hindsightInitUnit.serviceConfig.ExecStart;
               hermesMemory = hostConfig.services.hermes-agent.settings.memory;
               hermesEnv = hostConfig.services.hermes-agent.environment;
@@ -235,6 +240,24 @@
               ! grep -q -- '--chat-template' <<'EOF'
               ${llamaExec}
               EOF
+
+              grep -q -- 'hindsight-api --host 127.0.0.1 --port 8888' ${hindsightExec}
+              ! grep -q -- 'decommission-workers --yes' ${hindsightExec}
+              test '${toString (builtins.length hindsightExecStartPre)}' = '2'
+              grep -q -- 'hindsight_api.admin.cli' ${hindsightRecoveryExec}
+              grep -q -- 'decommission-workers --yes' ${hindsightRecoveryExec}
+              grep -q -- "to_regclass('public.async_operations')" ${hindsightRecoveryExec}
+              grep -q -- 'timeout 15s' ${hindsightRecoveryExec}
+              llm_preflight="$(sed -n 's#.* \(/nix/store/.*hindsight-llm-preflight.py\)$#\1#p' ${hindsightRecoveryExec})"
+              test -n "$llm_preflight"
+              grep -q -- '/models' "$llm_preflight"
+              grep -q -- 'Authorization' "$llm_preflight"
+              grep -q -- 'HINDSIGHT_API_LLM_MODEL' "$llm_preflight"
+              grep -q -- 'Missing configured Hindsight LLM model' "$llm_preflight"
+              test '${toString (builtins.elem envFile hindsightRestartTriggers)}' = '1'
+              test '${toString (builtins.elem hindsightSetupExec hindsightRestartTriggers)}' = '1'
+              test '${toString (builtins.elem hindsightRecoveryExec hindsightRestartTriggers)}' = '1'
+              test '${toString (builtins.elem hindsightExec hindsightRestartTriggers)}' = '1'
 
               touch $out
             '';
