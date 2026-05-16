@@ -133,6 +133,8 @@ in
         "${workspaceGroup}:/etc/group:ro"
         "${./assets/hermes-workspace/main-CSQgeRS2.js}:/app/dist/client/assets/main-CSQgeRS2.js:ro"
         "${./assets/hermes-workspace/router-DxziTUUJ.js}:/app/dist/server/assets/router-DxziTUUJ.js:ro"
+        "${./assets/hermes-workspace/tasks-client.js}:/app/dist/client/assets/tasks-Cxn6aO5f.js:ro"
+        "${./assets/hermes-workspace/tasks-server.js}:/app/dist/server/assets/tasks-DgvkflP0.js:ro"
         "${pkgs.glibc}:${pkgs.glibc}:ro"
         "${pkgs.zlib}:${pkgs.zlib}:ro"
         "${pkgs.sqlite}/bin/sqlite3:/usr/local/bin/sqlite3:ro"
