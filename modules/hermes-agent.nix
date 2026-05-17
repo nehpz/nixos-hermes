@@ -117,6 +117,9 @@
         require_mention = true; # Respond only when @mentioned
         auto_thread = true; # Isolate each conversation in a thread
         reactions = true; # Emoji reactions for processing state
+        # Keep the upstream default explicit: if Discord presence expands beyond
+        # the restricted Hermes channels below, review this context-ingestion boundary.
+        history_backfill = true;
         allowed_channels = [
           # Restrict to specific channel IDs; empty = all
           "1493930581090762833" # hermes-yui (text)
