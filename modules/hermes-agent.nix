@@ -9,6 +9,11 @@
     enable = true;
     addToSystemPackages = true;
 
+    # Optional Hermes pyproject dependency groups included in the sealed Python
+    # environment. The Discord gateway adapter lives in the upstream
+    # "messaging" group; without it the service can run while Discord is absent.
+    extraDependencyGroups = [ "messaging" ];
+
     # Packages required by enabled toolsets.
     # playwright-driver.browsers: NixOS-wrapped browser binaries for the browser toolset.
     # ffmpeg: audio processing for ElevenLabs TTS voice bubble delivery.
