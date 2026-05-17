@@ -158,6 +158,43 @@
             vm-switch-smoke
             ;
 
+          agentmemory-service-config =
+            let
+              hostConfig = self.nixosConfigurations.nixos-hermes.config;
+              unit = hostConfig.systemd.services.agentmemory;
+              env = unit.environment;
+              service = unit.serviceConfig;
+            in
+            pkgs.runCommand "agentmemory-service-config" { } ''
+              set -eu
+              test '${if hostConfig.services.agentmemory.enable then "true" else "false"}' = 'true'
+              test '${hostConfig.services.agentmemory.package.version}' = '0.9.18'
+              test '${hostConfig.services.agentmemory.package.passthru.iii-engine.version}' = '0.11.2'
+              test '${env.HOME}' = '/var/lib/agentmemory'
+              test '${env.AGENTMEMORY_URL}' = 'http://127.0.0.1:3111'
+              test '${env.AGENTMEMORY_VIEWER_URL}' = 'http://127.0.0.1:3113'
+              test '${env.AGENTMEMORY_ALLOW_AGENT_SDK}' = 'false'
+              test '${env.AGENTMEMORY_AUTO_COMPRESS}' = 'false'
+              test '${env.GRAPH_EXTRACTION_ENABLED}' = 'false'
+              test '${env.CONSOLIDATION_ENABLED}' = 'false'
+              test '${env.AGENTMEMORY_INJECT_CONTEXT}' = 'false'
+              test '${env.AGENTMEMORY_TOOLS}' = 'core'
+              test '${env.III_REST_PORT}' = '3111'
+              test '${env.III_STREAMS_PORT}' = '3112'
+              test '${env.III_VIEWER_PORT}' = '3113'
+              test '${env.III_ENGINE_URL}' = 'ws://127.0.0.1:49134'
+              test '${service.User}' = 'agentmemory'
+              test '${service.Group}' = 'agentmemory'
+              test '${service.StateDirectory}' = 'agentmemory'
+              test '${service.WorkingDirectory}' = '/var/lib/agentmemory'
+              test '${service.ProtectSystem}' = 'strict'
+              test '${if service.ProtectHome then "true" else "false"}' = 'true'
+              grep -q -- '/bin/agentmemory --tools core' <<'EOF'
+              ${service.ExecStart}
+              EOF
+              touch $out
+            '';
+
           hindsight-service-config =
             let
               hostConfig = self.nixosConfigurations.nixos-hermes.config;

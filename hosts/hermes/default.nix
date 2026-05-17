@@ -10,6 +10,7 @@
     ./llama-server.nix
     ./hindsight-embed.nix
     ./hindsight-memory.nix
+    ./agentmemory.nix
     ../../modules/system.nix
     ../../modules/packages.nix
     ../../modules/hermes-agent.nix

@@ -40,7 +40,7 @@ in
     # llm-agents.nix provides claude-code, codex, omp, agent-browser, and many more.
     # Uses shared-nixpkgs overlay so packages build against our pkgs (not blueprint thunks).
     llm-agents.overlays.shared-nixpkgs
-    (_final: prev: {
+    (final: prev: {
       # Exposed via overlay so consumers (hermes-agent.nix) can reference
       # pkgs.opusCtypesShim without packages.nix coupling to any service.
       inherit opusCtypesShim;
@@ -73,6 +73,101 @@ in
           platforms = lib.platforms.linux ++ lib.platforms.darwin;
         };
       };
+
+      iii-engine = prev.stdenvNoCC.mkDerivation rec {
+        pname = "iii-engine";
+        version = "0.11.2";
+
+        src = prev.fetchzip {
+          url = "https://github.com/iii-hq/iii/releases/download/iii%2Fv${version}/iii-x86_64-unknown-linux-gnu.tar.gz";
+          hash = "sha256-Sg9wnmCWrlPYaE6m6Qla+r3WTi0iSbkiwix1ziYjAsM=";
+        };
+
+        dontConfigure = true;
+        dontBuild = true;
+
+        installPhase = ''
+          runHook preInstall
+          install -Dm0755 iii $out/bin/iii
+          runHook postInstall
+        '';
+
+        meta = {
+          description = "iii engine runtime used by Agent Memory";
+          homepage = "https://github.com/iii-hq/iii";
+          license = lib.licenses.asl20;
+          mainProgram = "iii";
+          platforms = [ "x86_64-linux" ];
+        };
+      };
+
+      agentmemory =
+        let
+          version = "0.9.18";
+          src = prev.fetchzip {
+            url = "https://registry.npmjs.org/@agentmemory/agentmemory/-/agentmemory-${version}.tgz";
+            hash = "sha256-Gatch1lwR/8LvfBvGzcLwJSqPJy2U3kQtzV22l/iNnA=";
+          };
+          nodeModules = prev.stdenvNoCC.mkDerivation {
+            pname = "agentmemory-node-modules";
+            inherit version src;
+
+            nativeBuildInputs = [
+              prev.cacert
+              prev.nodejs
+            ];
+
+            dontConfigure = true;
+            dontBuild = true;
+
+            installPhase = ''
+              runHook preInstall
+              export HOME="$TMPDIR/home"
+              export npm_config_cache="$TMPDIR/npm-cache"
+              npm install --omit=dev --ignore-scripts --legacy-peer-deps --no-audit --no-fund
+              mkdir -p $out
+              cp -R node_modules $out/node_modules
+              runHook postInstall
+            '';
+
+            outputHashAlgo = "sha256";
+            outputHashMode = "recursive";
+            outputHash = "sha256-03T/WrSD2j5mIyXvuBVjxHjOGTXsDoWcl3BBe+s46eY=";
+          };
+        in
+        prev.stdenvNoCC.mkDerivation {
+          pname = "agentmemory";
+          inherit version src;
+
+          nativeBuildInputs = [ prev.makeWrapper ];
+
+          dontConfigure = true;
+          dontBuild = true;
+
+          installPhase = ''
+            runHook preInstall
+            mkdir -p $out/lib/node_modules/@agentmemory/agentmemory
+            cp -R . $out/lib/node_modules/@agentmemory/agentmemory
+            ln -s ${nodeModules}/node_modules $out/lib/node_modules/@agentmemory/agentmemory/node_modules
+            makeWrapper ${prev.nodejs}/bin/node $out/bin/agentmemory \
+              --prefix PATH : ${prev.lib.makeBinPath [ final.iii-engine ]} \
+              --add-flags $out/lib/node_modules/@agentmemory/agentmemory/dist/cli.mjs
+            runHook postInstall
+          '';
+
+          passthru = {
+            inherit nodeModules;
+            iii-engine = final.iii-engine;
+          };
+
+          meta = {
+            description = "Persistent memory server for AI coding agents";
+            homepage = "https://github.com/rohitg00/agentmemory";
+            license = lib.licenses.asl20;
+            mainProgram = "agentmemory";
+            platforms = [ "x86_64-linux" ];
+          };
+        };
 
       # llama-cpp b6981 (pinned nixpkgs) predates Gemma 4 arch support (requires >= b8637).
       # Override with b8770 from nixpkgs-llama until FlakeHub NixOS/nixpkgs/0 catches up.

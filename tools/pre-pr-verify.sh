@@ -95,6 +95,7 @@ else
   run "flake eval/check" nix flake check --no-build --no-eval-cache
 fi
 run "generated Hindsight service config invariants" nix build ".#checks.${check_system}.hindsight-service-config" --no-link -L
+run "generated Agent Memory service config invariants" nix build ".#checks.${check_system}.agentmemory-service-config" --no-link -L
 
 if [[ "$skip_dry_build" == true ]]; then
   skip "nixos-rebuild dry-build"
@@ -123,7 +124,8 @@ Pre-PR verification evidence
 - mode: ${mode}
 - check_system: ${check_system}
 - flake eval/check: PASS
-- generated service config invariants: PASS
+- generated Hindsight service config invariants: PASS
+- generated Agent Memory service config invariants: PASS
 - dry-build: $([[ "$skip_dry_build" == true ]] && echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})" || echo PASS)
 - activation/switch VM tests: $([[ "$mode" == "full" ]] && echo PASS || echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})")
 - live Hindsight continuity smoke: $([[ "$hindsight_live" == true ]] && echo PASS || echo "SKIPPED (${SKIP_REASON:-not required for this change or intentionally deferred})")
