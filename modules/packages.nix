@@ -122,6 +122,17 @@ in
                   raise RuntimeError("failed to normalize file-id dependency in Cargo.toml")
               cargo_toml.write_text(cargo_toml_text)
 
+              workspace_toml = Path("Cargo.toml")
+              workspace_toml_text = workspace_toml.read_text()
+              old_gix_dependency = (
+                  'gix = { version = "0.83.0", git = "https://github.com/GitoxideLabs/gitoxide", '
+                  'rev = "575113dfb10b3ba12eb57f57a81b241e773968bd", default-features = false, features = ['
+              )
+              new_gix_dependency = 'gix = { version = "0.83.0", default-features = false, features = ['
+              if workspace_toml_text.count(old_gix_dependency) != 1:
+                  raise RuntimeError("unexpected workspace gix dependency")
+              workspace_toml.write_text(workspace_toml_text.replace(old_gix_dependency, new_gix_dependency))
+
               lock = Path("Cargo.lock")
               text = lock.read_text()
               blocks = text.split("[[package]]\n")
@@ -147,7 +158,20 @@ in
                   if source.startswith('git+') and (name, version) in registry_sources
               }
 
+              dependency_replacements = 0
+              for name, version, git_source in git_sources_to_normalize:
+                  registry_source = registry_sources[(name, version)]
+                  dependency_git_source = git_source.split('#', 1)[0]
+                  old_dependency = f'"{name} {version} ({dependency_git_source})"'
+                  new_dependency = f'"{name} {version} ({registry_source})"'
+                  count = text.count(old_dependency)
+                  if count:
+                      text = text.replace(old_dependency, new_dependency)
+                      dependency_replacements += count
+
+              blocks = text.split("[[package]]\n")
               kept = [blocks[0]]
+              removed_blocks = 0
               for block in blocks[1:]:
                   fields = {}
                   for line in block.splitlines():
@@ -156,8 +180,16 @@ in
                           fields[key] = value.strip('"')
                   identity = (fields.get('name'), fields.get('version'), fields.get('source'))
                   if identity in git_sources_to_normalize:
+                      removed_blocks += 1
                       continue
                   kept.append('[[package]]\n' + block)
+
+              if removed_blocks != len(git_sources_to_normalize):
+                  raise RuntimeError(
+                      f"removed {removed_blocks} git package blocks, expected {len(git_sources_to_normalize)}"
+                  )
+              if dependency_replacements == 0:
+                  raise RuntimeError("no dependency source annotations normalized")
 
               lock.write_text("".join(kept))
               PY
@@ -180,7 +212,7 @@ in
             cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
               src = patchedSrc;
               name = "${oldAttrs.pname}-${oldAttrs.version}-vendor";
-              hash = "sha256-cPcVD5HTvkxb1ylZr+XwPYER9kHLFOkGdqCkNitK8HM=";
+              hash = "sha256-Pz+LAc7jM1JCoA+73FC4C+aEQdpYSfuy7t0/O1RHH9E=";
             };
           }
         );
