@@ -1,6 +1,7 @@
 {
   pkgs,
   lib,
+  inputs,
   nixpkgs-llama,
   llm-agents,
   ...
@@ -9,14 +10,26 @@
 # Local package overrides — packages not yet available in the pinned nixpkgs channel.
 # Also owns NixOS packaging workarounds that are packaging concerns, not service config.
 let
+  hermesLocales = pkgs.runCommand "hermes-agent-locales" { } ''
+    mkdir -p $out
+    cp -R ${inputs.hermes-agent.outPath}/locales $out/locales
+  '';
+
   # nixpkgs patches CPython with no-ldconfig.patch — ctypes.util._findSoname_ldconfig
   # unconditionally returns None. LD_LIBRARY_PATH and ldconfig cache approaches are
   # both dead. Inject a sitecustomize.py via PYTHONPATH that patches find_library("opus")
   # to return the Nix store path directly before any user code runs.
+  #
+  # Hermes 0.14.0's agent.i18n resolves catalogs at site-packages/locales, but
+  # the Nix package omits the repo-level locales/ directory. Point the runtime
+  # i18n loader at the same locked source revision so gateway slash commands do
+  # not render raw keys such as gateway.resume.list_header.
   opusCtypesShim = pkgs.writeTextDir "sitecustomize.py" ''
     import ctypes.util as _cu
+    from pathlib import Path as _Path
 
     _OPUS_PATH = "${pkgs.libopus}/lib/libopus.so.0"
+    _HERMES_LOCALES = _Path("${hermesLocales}/locales")
     _orig = _cu.find_library
 
     def find_library(name, *args, **kwargs):
@@ -25,6 +38,14 @@ let
         return _orig(name, *args, **kwargs)
 
     _cu.find_library = find_library
+
+    try:
+        import agent.i18n as _hermes_i18n
+
+        _hermes_i18n._locales_dir = lambda: _HERMES_LOCALES
+        _hermes_i18n.reset_language_cache()
+    except Exception:
+        pass
   '';
 in
 {
